@@ -118,7 +118,7 @@ class TestDataprocMetastoreWithDefaultProjectIdHook(TestCase):
             request=dict(
                 parent=TEST_PARENT.format(TEST_PROJECT_NUMBER, TEST_LOCATION_ID),
                 service_id=TEST_SERVICE_ID,
-                service=TEST_SERVICE,
+                service={},
                 request_id=None,
             ),
             metadata=None,

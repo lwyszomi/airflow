@@ -18,10 +18,12 @@
 #
 """This module contains a Google Cloud Dataproc Metastore hook."""
 
+from time import sleep
 import warnings
-from typing import Dict, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
-from google.api_core.retry import Retry
+from google.api_core.operations_v1 import OperationsClient
+from google.api_core.retry import exponential_sleep_generator, Retry
 from google.cloud.metastore_v1 import DataprocMetastoreClient
 from google.cloud.metastore_v1.types import (
     Backup,
@@ -31,6 +33,7 @@ from google.cloud.metastore_v1.types import (
 from google.cloud.metastore_v1.types.metastore import DatabaseDumpSpec, Restore
 from google.protobuf.field_mask_pb2 import FieldMask
 
+from airflow.exceptions import AirflowException
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 
 
@@ -38,6 +41,10 @@ class DataprocMetastoreHook(GoogleBaseHook):
     """
     Hook for Google Cloud Dataproc Metastore APIs.
     """
+
+    def get_operation_client(self) -> OperationsClient:
+        """Returns OperationClient"""
+        return OperationsClient()
 
     def get_dataproc_metastore_client(
         self, region: Optional[str] = None, location: Optional[str] = None
@@ -72,6 +79,30 @@ class DataprocMetastoreHook(GoogleBaseHook):
         client = self.get_dataproc_metastore_client()
         result = client._get_default_mtls_endpoint(api_endpoint=api_endpoint)
         return result
+
+    def get_operation(self, operation_name: str):
+        """
+        Fetches the operation from Google Cloud
+
+        :param operation_name: Name of operation to fetch
+        :type operation_name: str
+        :return: The new, updated operation from Google Cloud
+        """
+        return self.get_operation_client().get_operation(
+            name=operation_name
+        )
+
+    def wait_for_operation(self, operation: Dict[str, Any]) -> Dict[str, Any]:
+        """Waits for long-lasting operation to complete."""
+        for time_to_wait in exponential_sleep_generator(initial=10, maximum=120):
+            sleep(time_to_wait)
+            operation = self.get_operation(operation.name)
+
+            if operation.get("done"):
+                break
+        if "error" in operation:
+            raise AirflowException(operation["error"])
+        return operation["response"]
 
     def create_backup(
         self,
@@ -208,7 +239,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         self,
         location_id: str,
         project_number: str,
-        service: Service,
+        service: Union[Dict, Service],
         service_id: str,
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
@@ -252,7 +283,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             request={
                 'parent': parent,
                 'service_id': service_id,
-                'service': service,
+                'service': service if service else {},
                 'request_id': request_id,
             },
             retry=retry,

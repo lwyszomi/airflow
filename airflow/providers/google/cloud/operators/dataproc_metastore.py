@@ -1,12 +1,28 @@
-from typing import Dict, Optional, Sequence, Tuple, Union
-from unittest import TestCase, mock
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+"""This module contains Google Dataproc Metastore operators."""
 
-from airflow import AirflowException
-from airflow.contrib.hooks.dataproc_metastore_hook import DataprocMetastoreHook
-from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
-from airflow.models import BaseOperator
-from airflow.utils.decorators import apply_defaults
+from typing import Dict, Optional, Sequence, Tuple, Union
+from google.api_core import operation
+
 from google.api_core.retry import Retry
+from googleapiclient.errors import HttpError
 from google.cloud.metastore_v1.types import (
     Backup,
     CreateBackupRequest,
@@ -30,11 +46,10 @@ from google.cloud.metastore_v1.types import (
 from google.cloud.redis_v1beta1 import CloudRedisClient
 from google.protobuf.field_mask_pb2 import FieldMask
 
-from tests.contrib.utils.base_gcp_mock import (
-    GCP_PROJECT_ID_HOOK_UNIT_TEST,
-    mock_base_gcp_hook_default_project_id,
-    mock_base_gcp_hook_no_default_project_id,
-)
+from airflow.exceptions import AirflowException
+from airflow.providers.google.cloud.hooks.dataproc_metastore import DataprocMetastoreHook
+from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
+from airflow.models import BaseOperator
 
 
 class DataprocMetastoreGetDefaultMtlsEndpointOperator(BaseOperator):
@@ -50,7 +65,6 @@ class DataprocMetastoreGetDefaultMtlsEndpointOperator(BaseOperator):
     :type gcp_conn_id: str
     """
 
-    @apply_defaults
     def __init__(
         self,
         api_endpoint: str = None,
@@ -99,10 +113,8 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
     :type gcp_conn_id: str
     """
 
-    @apply_defaults
     def __init__(
         self,
-        request: CreateBackupRequest,
         project_number: str,
         backup: Backup,
         backup_id: str,
@@ -114,7 +126,6 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
         **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.request = request
         self.project_number = project_number
         self.backup = backup
         self.backup_id = backup_id
@@ -126,7 +137,6 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
     def execute(self, context: Dict):
         hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
         hook.create_backup(
-            request=self.request,
             project_number=self.project_number,
             backup=self.backup,
             backup_id=self.backup_id,
@@ -168,10 +178,8 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
     :type gcp_conn_id: str
     """
 
-    @apply_defaults
     def __init__(
         self,
-        request: CreateMetadataImportRequest,
         project_number: str,
         metadata_import: MetadataImport,
         metadata_import_id: str,
@@ -183,7 +191,6 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
         **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.request = request
         self.project_number = project_number
         self.metadata_import = metadata_import
         self.metadata_import_id = metadata_import_id
@@ -195,7 +202,6 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
     def execute(self, context: Dict):
         hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
         hook.create_metadata_import(
-            request=self.request,
             project_number=self.project_number,
             metadata_import=self.metadata_import,
             metadata_import_id=self.metadata_import_id,
@@ -209,69 +215,110 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
     """
     Creates a metastore service in a project and location.
 
-    :param request:  The request object. Request message for
-        [DataprocMetastore.CreateService][google.cloud.metastore.v1.DataprocMetastore.CreateService].
-    :type request: google.cloud.metastore_v1.types.CreateServiceRequest
-    :param project_number: TODO: Fill description
+    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
+    :type location_id: str
+    :param project_number: Required. The ID of the Google Cloud project that the service belongs to.
     :type project_number: str
-    :param service:  Required. The Metastore service to create. The ``name`` field is ignored. The ID of the
-        created metastore service must be provided in the request's ``service_id`` field.
+    :param service:  Required. The Metastore service to create. The ``name`` field is ignored. The ID of
+        the created metastore service must be provided in the request's ``service_id`` field.
 
         This corresponds to the ``service`` field on the ``request`` instance; if ``request`` is provided,
         this should not be set.
     :type service: google.cloud.metastore_v1.types.Service
-    :param service_id:  Required. The ID of the metastore service, which is used as the final component of the
-        metastore service's name. This value must be between 2 and 63 characters long inclusive, begin with a
-        letter, end with a letter or number, and consist of alpha-numeric ASCII characters or hyphens.
+    :param service_id:  Required. The ID of the metastore service, which is used as the final component of
+        the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
+        with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
+        hyphens.
 
-        This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is provided,
-        this should not be set.
+        This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is
+        provided, this should not be set.
     :type service_id: str
+    :param request_id: Optional. A unique id used to identify the request.
+    :type request_id: str
     :param retry: Designation of what errors, if any, should be retried.
     :type retry: google.api_core.retry.Retry
     :param timeout: The timeout for this request.
     :type timeout: float
     :param metadata: Strings which should be sent along with the request as metadata.
     :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
+    :param gcp_conn_id: The connection ID to use connecting to Google Cloud.
     :type gcp_conn_id: str
+    :param impersonation_chain: Optional service account to impersonate using short-term
+        credentials, or chained list of accounts required to get the access_token
+        of the last account in the list, which will be impersonated in the request.
+        If set as a string, the account must grant the originating account
+        the Service Account Token Creator IAM role.
+        If set as a sequence, the identities from the list must grant
+        Service Account Token Creator IAM role to the directly preceding identity, with first
+        account from the list granting this role to the originating account (templated).
+    :type impersonation_chain: Union[str, Sequence[str]]
     """
 
-    @apply_defaults
+    template_fields = (
+        'project_number',
+        'service',
+        'impersonation_chain',
+    )
+    template_fields_renderers = {'service': 'json'}
+
     def __init__(
         self,
-        request: CreateServiceRequest,
+        *,
+        location_id: str,
         project_number: str,
-        service: Service,
+        service: Optional[Union[Dict, Service]] = None,
         service_id: str,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
+        request_id: Optional[str] = None,
+        retry: Optional[Retry] = None,
+        timeout: Optional[float] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = None,
         gcp_conn_id: str = "google_cloud_default",
-        *args,
+        impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
     ) -> None:
-        super().__init__(*args, **kwargs)
-        self.request = request
+        super().__init__(**kwargs)
+        self.location_id = location_id
         self.project_number = project_number
         self.service = service
         self.service_id = service_id
+        self.request_id = request_id
         self.retry = retry
         self.timeout = timeout
         self.metadata = metadata
         self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
 
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.create_service(
-            request=self.request,
-            project_number=self.project_number,
-            service=self.service,
-            service_id=self.service_id,
-            retry=self.retry,
-            timeout=self.timeout,
-            metadata=self.metadata,
+    def execute(self, context) -> dict:
+        hook = DataprocMetastoreHook(
+            gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
+        self.log.info("Creating Dataproc Metastore service: %s", self.project_number)
+        try:
+            operation = hook.create_service(
+                location_id=self.location_id,
+                project_number=self.project_number,
+                service=self.service,
+                service_id=self.service_id,
+                request_id=self.request_id,
+                retry=self.retry,
+                timeout=self.timeout,
+                metadata=self.metadata,
+            )
+            service = hook.wait_for_operation(operation)
+            self.log.info("Service %s created successfully", self.service_id)
+        except HttpError as err:
+            if err.resp.status not in (409, '409'):
+                raise
+            self.log.info("Instance %s already exists", self.instance_name)
+            service = hook.get_service(
+                location_id=self.location_id,
+                project_number=self.project_number,
+                service_id=self.service_id,
+                retry=self.retry,
+                timeout=self.timeout,
+                metadata=self.metadata,
+            )
+        return service
 
 
 class DataprocMetastoreDeleteBackupOperator(BaseOperator):
@@ -293,10 +340,8 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
     :type gcp_conn_id: str
     """
 
-    @apply_defaults
     def __init__(
         self,
-        request: DeleteBackupRequest,
         project_number: str,
         retry: Retry,
         timeout: float,
@@ -306,7 +351,6 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
         **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.request = request
         self.project_number = project_number
         self.retry = retry
         self.timeout = timeout
@@ -316,7 +360,6 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
     def execute(self, context: Dict):
         hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
         hook.delete_backup(
-            request=self.request,
             project_number=self.project_number,
             retry=self.retry,
             timeout=self.timeout,
@@ -343,35 +386,49 @@ class DataprocMetastoreDeleteServiceOperator(BaseOperator):
     :type gcp_conn_id: str
     """
 
-    @apply_defaults
+    template_fields = (
+        'project_number'
+        'impersonation_chain'
+    )
+
     def __init__(
         self,
-        request: DeleteServiceRequest,
+        *,
+        location_id: str,
         project_number: str,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
+        service_id: str,
+        retry: Optional[Retry] = None,
+        timeout: Optional[float] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = None,
         gcp_conn_id: str = "google_cloud_default",
-        *args,
+        impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
     ) -> None:
-        super().__init__(*args, **kwargs)
-        self.request = request
+        super().__init__(**kwargs)
+        self.location_id = location_id
         self.project_number = project_number
+        self.service_id = service_id
         self.retry = retry
         self.timeout = timeout
         self.metadata = metadata
         self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
 
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.delete_service(
-            request=self.request,
+    def execute(self, context) -> dict:
+        hook = DataprocMetastoreHook(
+            gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
+        )
+        self.log.info("Deleting Dataproc Metastore service: %s", self.project_number)
+        operation = hook.delete_service(
+            location_id=self.location_id,
             project_number=self.project_number,
+            service_id=self.service_id,
             retry=self.retry,
             timeout=self.timeout,
             metadata=self.metadata,
         )
+        hook.wait_for_operation(operation)
+        self.log.info("Service %s deleted successfully", self.project_number)
 
 
 class DataprocMetastoreExportMetadataOperator(BaseOperator):
@@ -391,10 +448,8 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
     :type gcp_conn_id: str
     """
 
-    @apply_defaults
     def __init__(
         self,
-        request: ExportMetadataRequest,
         retry: Retry,
         timeout: float,
         metadata: Sequence[Tuple[str, str]],
@@ -403,7 +458,6 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
         **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.request = request
         self.retry = retry
         self.timeout = timeout
         self.metadata = metadata
@@ -412,107 +466,6 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
     def execute(self, context: Dict):
         hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
         hook.export_metadata(
-            request=self.request,
-            retry=self.retry,
-            timeout=self.timeout,
-            metadata=self.metadata,
-        )
-
-
-class DataprocMetastoreGetBackupOperator(BaseOperator):
-    """
-    Gets details of a single backup.
-
-    :param request:  The request object. Request message for
-        [DataprocMetastore.GetBackup][google.cloud.metastore.v1.DataprocMetastore.GetBackup].
-    :type request: google.cloud.metastore_v1.types.GetBackupRequest
-    :param project_number: TODO: Fill description
-    :type project_number: str
-    :param retry: Designation of what errors, if any, should be retried.
-    :type retry: google.api_core.retry.Retry
-    :param timeout: The timeout for this request.
-    :type timeout: float
-    :param metadata: Strings which should be sent along with the request as metadata.
-    :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
-    :type gcp_conn_id: str
-    """
-
-    @apply_defaults
-    def __init__(
-        self,
-        request: GetBackupRequest,
-        project_number: str,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
-        gcp_conn_id: str = "google_cloud_default",
-        *args,
-        **kwargs
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.request = request
-        self.project_number = project_number
-        self.retry = retry
-        self.timeout = timeout
-        self.metadata = metadata
-        self.gcp_conn_id = gcp_conn_id
-
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.get_backup(
-            request=self.request,
-            project_number=self.project_number,
-            retry=self.retry,
-            timeout=self.timeout,
-            metadata=self.metadata,
-        )
-
-
-class DataprocMetastoreGetMetadataImportOperator(BaseOperator):
-    """
-    Gets details of a single import.
-
-    :param request:  The request object. Request message for
-        [DataprocMetastore.GetMetadataImport][google.cloud.metastore.v1.DataprocMetastore.GetMetadataImport].
-    :type request: google.cloud.metastore_v1.types.GetMetadataImportRequest
-    :param project_number: TODO: Fill description
-    :type project_number: str
-    :param retry: Designation of what errors, if any, should be retried.
-    :type retry: google.api_core.retry.Retry
-    :param timeout: The timeout for this request.
-    :type timeout: float
-    :param metadata: Strings which should be sent along with the request as metadata.
-    :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
-    :type gcp_conn_id: str
-    """
-
-    @apply_defaults
-    def __init__(
-        self,
-        request: GetMetadataImportRequest,
-        project_number: str,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
-        gcp_conn_id: str = "google_cloud_default",
-        *args,
-        **kwargs
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.request = request
-        self.project_number = project_number
-        self.retry = retry
-        self.timeout = timeout
-        self.metadata = metadata
-        self.gcp_conn_id = gcp_conn_id
-
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.get_metadata_import(
-            request=self.request,
-            project_number=self.project_number,
             retry=self.retry,
             timeout=self.timeout,
             metadata=self.metadata,
@@ -523,50 +476,79 @@ class DataprocMetastoreGetServiceOperator(BaseOperator):
     """
     Gets the details of a single service.
 
-    :param request:  The request object. Request message for
-        [DataprocMetastore.GetService][google.cloud.metastore.v1.DataprocMetastore.GetService].
-    :type request: google.cloud.metastore_v1.types.GetServiceRequest
-    :param project_number: TODO: Fill description
+    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
+    :type location_id: str
+    :param project_number: Required. The ID of the Google Cloud project that the service belongs to.
     :type project_number: str
+    :param service_id:  Required. The ID of the metastore service, which is used as the final component of
+        the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
+        with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
+        hyphens.
+
+        This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is
+        provided, this should not be set.
+    :type service_id: str
     :param retry: Designation of what errors, if any, should be retried.
     :type retry: google.api_core.retry.Retry
     :param timeout: The timeout for this request.
     :type timeout: float
     :param metadata: Strings which should be sent along with the request as metadata.
     :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
+    :param gcp_conn_id: The connection ID to use connecting to Google Cloud.
     :type gcp_conn_id: str
+    :param impersonation_chain: Optional service account to impersonate using short-term
+        credentials, or chained list of accounts required to get the access_token
+        of the last account in the list, which will be impersonated in the request.
+        If set as a string, the account must grant the originating account
+        the Service Account Token Creator IAM role.
+        If set as a sequence, the identities from the list must grant
+        Service Account Token Creator IAM role to the directly preceding identity, with first
+        account from the list granting this role to the originating account (templated).
+    :type impersonation_chain: Union[str, Sequence[str]]
     """
 
-    @apply_defaults
+    template_fields = (
+        'project_number',
+        'impersonation_chain',
+    )
+
     def __init__(
         self,
-        request: GetServiceRequest,
+        *,
+        location_id: str,
         project_number: str,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
+        service_id: str,
+        retry: Optional[Retry] = None,
+        timeout: Optional[float] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = None,
         gcp_conn_id: str = "google_cloud_default",
-        *args,
+        impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
     ) -> None:
-        super().__init__(*args, **kwargs)
-        self.request = request
+        super().__init__(**kwargs)
+        self.location_id = location_id
         self.project_number = project_number
+        self.service_id = service_id
         self.retry = retry
         self.timeout = timeout
         self.metadata = metadata
         self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
 
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.get_service(
-            request=self.request,
+    def execute(self, context) -> dict:
+        hook = DataprocMetastoreHook(
+            gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
+        )
+        self.log.info("Gets the details of a single Dataproc Metastore service: %s", self.project_number)
+        result = hook.get_service(
+            location_id=self.location_id,
             project_number=self.project_number,
+            service_id=self.service_id,
             retry=self.retry,
             timeout=self.timeout,
             metadata=self.metadata,
         )
+        return result
 
 
 class DataprocMetastoreListBackupsOperator(BaseOperator):
@@ -588,10 +570,8 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
     :type gcp_conn_id: str
     """
 
-    @apply_defaults
     def __init__(
         self,
-        request: ListBackupsRequest,
         project_number: str,
         retry: Retry,
         timeout: float,
@@ -601,7 +581,6 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
         **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.request = request
         self.project_number = project_number
         self.retry = retry
         self.timeout = timeout
@@ -611,108 +590,6 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
     def execute(self, context: Dict):
         hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
         hook.list_backups(
-            request=self.request,
-            project_number=self.project_number,
-            retry=self.retry,
-            timeout=self.timeout,
-            metadata=self.metadata,
-        )
-
-
-class DataprocMetastoreListMetadataImportsOperator(BaseOperator):
-    """
-    Lists imports in a service.
-
-    :param request:  The request object. Request message for
-        [DataprocMetastore.ListMetadataImports][google.cloud.metastore.v1.DataprocMetastore.ListMetadataImport
-        s].
-    :type request: google.cloud.metastore_v1.types.ListMetadataImportsRequest
-    :param project_number: TODO: Fill description
-    :type project_number: str
-    :param retry: Designation of what errors, if any, should be retried.
-    :type retry: google.api_core.retry.Retry
-    :param timeout: The timeout for this request.
-    :type timeout: float
-    :param metadata: Strings which should be sent along with the request as metadata.
-    :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
-    :type gcp_conn_id: str
-    """
-
-    @apply_defaults
-    def __init__(
-        self,
-        request: ListMetadataImportsRequest,
-        project_number: str,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
-        gcp_conn_id: str = "google_cloud_default",
-        *args,
-        **kwargs
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.request = request
-        self.project_number = project_number
-        self.retry = retry
-        self.timeout = timeout
-        self.metadata = metadata
-        self.gcp_conn_id = gcp_conn_id
-
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.list_metadata_imports(
-            request=self.request,
-            project_number=self.project_number,
-            retry=self.retry,
-            timeout=self.timeout,
-            metadata=self.metadata,
-        )
-
-
-class DataprocMetastoreListServicesOperator(BaseOperator):
-    """
-    Lists services in a project and location.
-
-    :param request:  The request object. Request message for
-        [DataprocMetastore.ListServices][google.cloud.metastore.v1.DataprocMetastore.ListServices].
-    :type request: google.cloud.metastore_v1.types.ListServicesRequest
-    :param project_number: TODO: Fill description
-    :type project_number: str
-    :param retry: Designation of what errors, if any, should be retried.
-    :type retry: google.api_core.retry.Retry
-    :param timeout: The timeout for this request.
-    :type timeout: float
-    :param metadata: Strings which should be sent along with the request as metadata.
-    :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
-    :type gcp_conn_id: str
-    """
-
-    @apply_defaults
-    def __init__(
-        self,
-        request: ListServicesRequest,
-        project_number: str,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
-        gcp_conn_id: str = "google_cloud_default",
-        *args,
-        **kwargs
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.request = request
-        self.project_number = project_number
-        self.retry = retry
-        self.timeout = timeout
-        self.metadata = metadata
-        self.gcp_conn_id = gcp_conn_id
-
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.list_services(
-            request=self.request,
             project_number=self.project_number,
             retry=self.retry,
             timeout=self.timeout,
@@ -752,10 +629,8 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
     :type gcp_conn_id: str
     """
 
-    @apply_defaults
     def __init__(
         self,
-        request: RestoreServiceRequest,
         service: str,
         backup: str,
         retry: Retry,
@@ -766,7 +641,6 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
         **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.request = request
         self.service = service
         self.backup = backup
         self.retry = retry
@@ -777,75 +651,8 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
     def execute(self, context: Dict):
         hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
         hook.restore_service(
-            request=self.request,
             service=self.service,
             backup=self.backup,
-            retry=self.retry,
-            timeout=self.timeout,
-            metadata=self.metadata,
-        )
-
-
-class DataprocMetastoreUpdateMetadataImportOperator(BaseOperator):
-    """
-    Updates a single import. Only the description field of MetadataImport is supported to be updated.
-
-    :param request:  The request object. Request message for [DataprocMetastore.UpdateMetadataImport][google.c
-        loud.metastore.v1.DataprocMetastore.UpdateMetadataImport].
-    :type request: google.cloud.metastore_v1.types.UpdateMetadataImportRequest
-    :param metadata_import:  Required. The metadata import to update. The server only merges fields in the
-        import if they are specified in ``update_mask``.
-
-        The metadata import's ``name`` field is used to identify the metastore import to be updated.
-
-        This corresponds to the ``metadata_import`` field on the ``request`` instance; if ``request`` is
-        provided, this should not be set.
-    :type metadata_import: google.cloud.metastore_v1.types.MetadataImport
-    :param update_mask:  Required. A field mask used to specify the fields to be overwritten in the metadata
-        import resource by the update. Fields specified in the ``update_mask`` are relative to the resource
-        (not to the full request). A field is overwritten if it is in the mask.
-
-        This corresponds to the ``update_mask`` field on the ``request`` instance; if ``request`` is provided,
-        this should not be set.
-    :type update_mask: google.protobuf.field_mask_pb2.FieldMask
-    :param retry: Designation of what errors, if any, should be retried.
-    :type retry: google.api_core.retry.Retry
-    :param timeout: The timeout for this request.
-    :type timeout: float
-    :param metadata: Strings which should be sent along with the request as metadata.
-    :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
-    :type gcp_conn_id: str
-    """
-
-    @apply_defaults
-    def __init__(
-        self,
-        request: UpdateMetadataImportRequest,
-        metadata_import: MetadataImport,
-        update_mask: FieldMask,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
-        gcp_conn_id: str = "google_cloud_default",
-        *args,
-        **kwargs
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.request = request
-        self.metadata_import = metadata_import
-        self.update_mask = update_mask
-        self.retry = retry
-        self.timeout = timeout
-        self.metadata = metadata
-        self.gcp_conn_id = gcp_conn_id
-
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.update_metadata_import(
-            request=self.request,
-            metadata_import=self.metadata_import,
-            update_mask=self.update_mask,
             retry=self.retry,
             timeout=self.timeout,
             metadata=self.metadata,
@@ -884,10 +691,8 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
     :type gcp_conn_id: str
     """
 
-    @apply_defaults
     def __init__(
         self,
-        request: UpdateServiceRequest,
         service: Service,
         update_mask: FieldMask,
         retry: Retry,
@@ -898,7 +703,6 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
         **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
-        self.request = request
         self.service = service
         self.update_mask = update_mask
         self.retry = retry
@@ -909,7 +713,6 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
     def execute(self, context: Dict):
         hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
         hook.update_service(
-            request=self.request,
             service=self.service,
             update_mask=self.update_mask,
             retry=self.retry,
