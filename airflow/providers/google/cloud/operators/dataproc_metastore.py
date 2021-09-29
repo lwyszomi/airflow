@@ -28,6 +28,7 @@ from google.cloud.metastore_v1.types import (
     MetadataImport,
     Service,
 )
+from google.cloud.metastore_v1.types.metastore import DatabaseDumpSpec, Restore
 from google.cloud.redis_v1beta1 import CloudRedisClient
 from google.protobuf.field_mask_pb2 import FieldMask
 
@@ -446,8 +447,8 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
     """
 
     template_fields = (
-        'project_number'
-        'impersonation_chain'
+        'project_number',
+        'impersonation_chain',
     )
 
     def __init__(
@@ -516,8 +517,8 @@ class DataprocMetastoreDeleteServiceOperator(BaseOperator):
     """
 
     template_fields = (
-        'project_number'
-        'impersonation_chain'
+        'project_number',
+        'impersonation_chain',
     )
 
     def __init__(
@@ -564,41 +565,96 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
     """
     Exports metadata from a service.
 
-    :param request:  The request object. Request message for
-        [DataprocMetastore.ExportMetadata][google.cloud.metastore.v1.DataprocMetastore.ExportMetadata].
-    :type request: google.cloud.metastore_v1.types.ExportMetadataRequest
-    :param retry: Designation of what errors, if any, should be retried.
+    :param destination_gcs_folder: A Cloud Storage URI of a folder, in the format
+        ``gs://<bucket_name>/<path_inside_bucket>``. A sub-folder
+        ``<export_folder>`` containing exported files will be
+        created below it.
+    :type destination_gcs_folder: str
+    :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
+    :type project_id: str
+    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
+    :type location_id: str
+    :param service_id:  Required. The ID of the metastore service, which is used as the final component of
+        the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
+        with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
+        hyphens.
+        This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is
+        provided, this should not be set.
+    :type service_id: str
+    :param request_id: Optional. A unique id used to identify the request.
+    :type request_id: str
+    :param retry: Optional. Designation of what errors, if any, should be retried.
     :type retry: google.api_core.retry.Retry
-    :param timeout: The timeout for this request.
+    :param timeout: Optional. The timeout for this request.
     :type timeout: float
-    :param metadata: Strings which should be sent along with the request as metadata.
+    :param metadata: Optional. Strings which should be sent along with the request as metadata.
     :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
+    :param gcp_conn_id: The connection ID to use connecting to Google Cloud.
     :type gcp_conn_id: str
+    :param impersonation_chain: Optional service account to impersonate using short-term
+        credentials, or chained list of accounts required to get the access_token
+        of the last account in the list, which will be impersonated in the request.
+        If set as a string, the account must grant the originating account
+        the Service Account Token Creator IAM role.
+        If set as a sequence, the identities from the list must grant
+        Service Account Token Creator IAM role to the directly preceding identity, with first
+        account from the list granting this role to the originating account (templated).
+    :type impersonation_chain: Union[str, Sequence[str]]
     """
+
+    template_fields = (
+        'project_id',
+        'impersonation_chain',
+    )
 
     def __init__(
         self,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
+        *,
+        destination_gcs_folder: str,
+        project_id: str,
+        location_id: str,
+        service_id: str,
+        request_id: Optional[str] = None,
+        database_dump_type: Optional[DatabaseDumpSpec] = None,
+        retry: Optional[Retry] = None,
+        timeout: Optional[float] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = None,
         gcp_conn_id: str = "google_cloud_default",
-        *args,
+        impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
+
         **kwargs
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
+        self.destination_gcs_folder = destination_gcs_folder
+        self.project_id = project_id
+        self.location_id = location_id
+        self.service_id = service_id
+        self.request_id = request_id
+        self.database_dump_type = database_dump_type
         self.retry = retry
         self.timeout = timeout
         self.metadata = metadata
         self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
 
     def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.export_metadata(
+        hook = DataprocMetastoreHook(
+            gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
+        )
+        self.log.info("Exporting metadata from Dataproc Metastore service: %s", self.service_id)
+        operation = hook.export_metadata(
+            destination_gcs_folder=self.destination_gcs_folder,
+            project_id=self.project_id,
+            location_id=self.location_id,
+            service_id=self.service_id,
+            request_id=self.request_id,
+            database_dump_type=self.database_dump_type,
             retry=self.retry,
             timeout=self.timeout,
             metadata=self.metadata,
         )
+        hook.wait_for_operation(operation)
+        self.log.info("Metadata from service %s exported successfully", self.service_id)
 
 
 class DataprocMetastoreGetServiceOperator(BaseOperator):
@@ -775,71 +831,120 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
     """
     Restores a service from a backup.
 
-    :param request:  The request object. Request message for [DataprocMetastore.Restore][].
-    :type request: google.cloud.metastore_v1.types.RestoreServiceRequest
-    :param service:  Required. The relative resource name of the metastore service to run restore, in the
-        following form:
+    :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
+    :type project_id: str
+    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
+    :type location_id: str
+    :param service_id: Required. The ID of the metastore service, which is used as the final component of
+        the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
+        with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
+        hyphens.
 
-        ``projects/{project_id}/locations/{location_id}/services/{service_id}``.
-
-        This corresponds to the ``service`` field on the ``request`` instance; if ``request`` is provided,
-        this should not be set.
-    :type service: str
-    :param backup:  Required. The relative resource name of the metastore service backup to restore from, in
-        the following form:
-
-        ``projects/{project_id}/locations/{location_id}/services/{service_id}/backups/{backup_id}``.
-
-        This corresponds to the ``backup`` field on the ``request`` instance; if ``request`` is provided, this
-        should not be set.
-    :type backup: str
-    :param retry: Designation of what errors, if any, should be retried.
+        This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is
+        provided, this should not be set.
+    :type service_id: str
+    :param backup_project_id: Required. The ID of the Google Cloud project that the metastore service backup to restore from.
+    :type backup_project_id: str
+    :param backup_location_id: Required. The ID of the Google Cloud location that the metastore service backup to restore from.
+    :type backup_location_id: str
+    :param backup_service_id:  Required. The ID of the metastore service backup to restore from, which is used as the final component of
+        the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
+        with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
+        hyphens.
+    :type backup_service_id: str
+    :param backup_id:  Required. The ID of the metastore service backup to restore from
+    :type backup_id: str
+    :param restore_type: Optional. The type of restore. If unspecified, defaults to
+        ``METADATA_ONLY``
+    :type restore_type: google.cloud.metastore_v1.types.Restore.RestoreType
+    :param request_id: Optional. A unique id used to identify the request.
+    :type request_id: str
+    :param retry: Optional. Designation of what errors, if any, should be retried.
     :type retry: google.api_core.retry.Retry
-    :param timeout: The timeout for this request.
+    :param timeout: Optional. The timeout for this request.
     :type timeout: float
-    :param metadata: Strings which should be sent along with the request as metadata.
+    :param metadata: Optional. Strings which should be sent along with the request as metadata.
     :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
+    :param gcp_conn_id: The connection ID to use connecting to Google Cloud.
     :type gcp_conn_id: str
+    :param impersonation_chain: Optional service account to impersonate using short-term
+        credentials, or chained list of accounts required to get the access_token
+        of the last account in the list, which will be impersonated in the request.
+        If set as a string, the account must grant the originating account
+        the Service Account Token Creator IAM role.
+        If set as a sequence, the identities from the list must grant
+        Service Account Token Creator IAM role to the directly preceding identity, with first
+        account from the list granting this role to the originating account (templated).
+    :type impersonation_chain: Union[str, Sequence[str]]
     """
+
+    template_fields = (
+        'project_id',
+        'impersonation_chain',
+    )
 
     def __init__(
         self,
-        service: str,
-        backup: str,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
+        *,
+        project_id: str,
+        location_id: str,
+        service_id: str,
+        backup_project_id: str,
+        backup_location_id: str,
+        backup_service_id: str,
+        backup_id: str,
+        restore_type: Optional[Restore] = None,
+        request_id: Optional[str] = None,
+        retry: Optional[Retry] = None,
+        timeout: Optional[float] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = None,
         gcp_conn_id: str = "google_cloud_default",
-        *args,
+        impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
     ) -> None:
-        super().__init__(*args, **kwargs)
-        self.service = service
-        self.backup = backup
+        super().__init__(**kwargs)
+        self.project_id = project_id
+        self.location_id = location_id
+        self.service_id = service_id
+        self.backup_project_id = backup_project_id
+        self.backup_location_id = backup_location_id
+        self.backup_service_id = backup_service_id
+        self.backup_id = backup_id
+        self.restore_type = restore_type
+        self.request_id = request_id
         self.retry = retry
         self.timeout = timeout
         self.metadata = metadata
         self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
 
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.restore_service(
-            service=self.service,
-            backup=self.backup,
+    def execute(self, context) -> dict:
+        hook = DataprocMetastoreHook(
+            gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
+        )
+        self.log.info("Restoring Dataproc Metastore service: %s from backup: %s", self.service_id, self.backup_id)
+        operation = hook.restore_service(
+            project_id=self.project_id,
+            location_id=self.location_id,
+            service_id=self.service_id,
+            backup_project_id=self.backup_project_id,
+            backup_location_id=self.backup_location_id,
+            backup_service_id=self.backup_service_id,
+            backup_id=self.backup_id,
+            restore_type=self.restore_type,
+            request_id=self.request_id,
             retry=self.retry,
             timeout=self.timeout,
             metadata=self.metadata,
         )
+        hook.wait_for_operation(operation)
+        self.log.info("Service %s restored from backup %s", self.service_id, self.backup_id)
 
 
 class DataprocMetastoreUpdateServiceOperator(BaseOperator):
     """
     Updates the parameters of a single service.
 
-    :param request:  The request object. Request message for
-        [DataprocMetastore.UpdateService][google.cloud.metastore.v1.DataprocMetastore.UpdateService].
-    :type request: google.cloud.metastore_v1.types.UpdateServiceRequest
     :param service:  Required. The metastore service to update. The server only merges fields in the service
         if they are specified in ``update_mask``.
 
@@ -855,41 +960,69 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
         This corresponds to the ``update_mask`` field on the ``request`` instance; if ``request`` is provided,
         this should not be set.
     :type update_mask: google.protobuf.field_mask_pb2.FieldMask
-    :param retry: Designation of what errors, if any, should be retried.
+    :param request_id: Optional. A unique id used to identify the request.
+    :type request_id: str
+    :param retry: Optional. Designation of what errors, if any, should be retried.
     :type retry: google.api_core.retry.Retry
-    :param timeout: The timeout for this request.
+    :param timeout: Optional. The timeout for this request.
     :type timeout: float
-    :param metadata: Strings which should be sent along with the request as metadata.
+    :param metadata: Optional. Strings which should be sent along with the request as metadata.
     :type metadata: Sequence[Tuple[str, str]]
-    :param gcp_conn_id:
+    :param gcp_conn_id: The connection ID to use connecting to Google Cloud.
     :type gcp_conn_id: str
+    :param impersonation_chain: Optional service account to impersonate using short-term
+        credentials, or chained list of accounts required to get the access_token
+        of the last account in the list, which will be impersonated in the request.
+        If set as a string, the account must grant the originating account
+        the Service Account Token Creator IAM role.
+        If set as a sequence, the identities from the list must grant
+        Service Account Token Creator IAM role to the directly preceding identity, with first
+        account from the list granting this role to the originating account (templated).
+    :type impersonation_chain: Union[str, Sequence[str]]
     """
+
+    template_fields = (
+        'project_id',
+        'impersonation_chain',
+    )
 
     def __init__(
         self,
+        *,
         service: Service,
         update_mask: FieldMask,
-        retry: Retry,
-        timeout: float,
-        metadata: Sequence[Tuple[str, str]],
+        request_id: Optional[str] = None,
+        retry: Optional[Retry] = None,
+        timeout: Optional[float] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = None,
         gcp_conn_id: str = "google_cloud_default",
-        *args,
+        impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
     ) -> None:
-        super().__init__(*args, **kwargs)
+        super().__init__(**kwargs)
         self.service = service
         self.update_mask = update_mask
+        self.request_id = request_id
         self.retry = retry
         self.timeout = timeout
         self.metadata = metadata
         self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
 
     def execute(self, context: Dict):
+        hook = DataprocMetastoreHook(
+            gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
+        )
+        self.log.info("Updating Dataproc Metastore service: %s", self.service_id)
+
         hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook.update_service(
+        operation = hook.update_service(
             service=self.service,
             update_mask=self.update_mask,
+            request_id=self.request_id,
             retry=self.retry,
             timeout=self.timeout,
             metadata=self.metadata,
         )
+        hook.wait_for_operation(operation)
+        self.log.info("Service %s updated successfully", self.service_id)
