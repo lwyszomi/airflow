@@ -19,7 +19,6 @@
 """This module contains Google Dataproc Metastore operators."""
 
 from typing import Dict, Optional, Sequence, Tuple, Union
-from google.api_core import operation
 
 from google.api_core.retry import Retry
 from googleapiclient.errors import HttpError
@@ -29,12 +28,11 @@ from google.cloud.metastore_v1.types import (
     Service,
 )
 from google.cloud.metastore_v1.types.metastore import DatabaseDumpSpec, Restore
-from google.cloud.redis_v1beta1 import CloudRedisClient
 from google.protobuf.field_mask_pb2 import FieldMask
 
-from airflow.exceptions import AirflowException
+# from airflow.exceptions import AirflowException
 from airflow.providers.google.cloud.hooks.dataproc_metastore import DataprocMetastoreHook
-from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
+# from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from airflow.models import BaseOperator
 
 
@@ -135,7 +133,7 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
@@ -185,7 +183,7 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
                 timeout=self.timeout,
                 metadata=self.metadata,
             )
-        return backup
+        return Backup.to_dict(backup)
 
 
 class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
@@ -256,7 +254,7 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
@@ -352,7 +350,7 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
@@ -399,7 +397,7 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
                 timeout=self.timeout,
                 metadata=self.metadata,
             )
-        return service
+        return Service.to_dict(service)
 
 
 class DataprocMetastoreDeleteBackupOperator(BaseOperator):
@@ -461,7 +459,7 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
@@ -529,7 +527,7 @@ class DataprocMetastoreDeleteServiceOperator(BaseOperator):
         service_id: str,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
@@ -618,7 +616,7 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
         database_dump_type: Optional[DatabaseDumpSpec] = None,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
 
@@ -705,7 +703,7 @@ class DataprocMetastoreGetServiceOperator(BaseOperator):
         service_id: str,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
@@ -733,7 +731,7 @@ class DataprocMetastoreGetServiceOperator(BaseOperator):
             timeout=self.timeout,
             metadata=self.metadata,
         )
-        return result
+        return Service.to_dict(result)
 
 
 class DataprocMetastoreListBackupsOperator(BaseOperator):
@@ -788,7 +786,7 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
         order_by: Optional[str] = None,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
         **kwargs
@@ -812,7 +810,7 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
             gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
         self.log.info("Listing Dataproc Metastore backups: %s", self.service_id)
-        result = hook.list_backups(
+        backups = hook.list_backups(
             project_number=self.project_number,
             location_id=self.location_id,
             service_id=self.service_id,
@@ -824,7 +822,7 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
             timeout=self.timeout,
             metadata=self.metadata,
         )
-        return result
+        return [Backup.to_dict(backup) for backup in backups]
 
 
 class DataprocMetastoreRestoreServiceOperator(BaseOperator):

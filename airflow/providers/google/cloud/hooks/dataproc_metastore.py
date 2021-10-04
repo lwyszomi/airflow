@@ -23,6 +23,7 @@ import warnings
 from typing import Any, Dict, Optional, Sequence, Tuple, Union
 
 from google.api_core.operations_v1 import OperationsClient
+from google.api_core.operation import Operation
 from google.api_core.retry import exponential_sleep_generator, Retry
 from google.cloud.metastore_v1 import DataprocMetastoreClient
 from google.cloud.metastore_v1.types import (
@@ -92,17 +93,17 @@ class DataprocMetastoreHook(GoogleBaseHook):
             name=operation_name
         )
 
-    def wait_for_operation(self, operation: Dict[str, Any]) -> Dict[str, Any]:
+    def wait_for_operation(self, operation: Operation):
         """Waits for long-lasting operation to complete."""
         for time_to_wait in exponential_sleep_generator(initial=10, maximum=120):
             sleep(time_to_wait)
-            operation = self.get_operation(operation.name)
-
-            if operation.get("done"):
+            if operation.done():
                 break
-        if "error" in operation:
-            raise AirflowException(operation["error"])
-        return operation["response"]
+        
+        error = operation.exception()
+        if error:
+            raise AirflowException(error)
+        return operation.result()
 
     def create_backup(
         self,
@@ -244,7 +245,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
     ):
         """
         Creates a metastore service in a project and location.

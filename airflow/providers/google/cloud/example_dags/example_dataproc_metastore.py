@@ -37,11 +37,15 @@ from airflow.providers.google.cloud.operators.dataproc_metastore import (
 )
 from airflow.utils.dates import days_ago
 
-PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "default-project-id")
-SERVICE_ID = os.environ.get("GCP_DATAPROC_METASTORE_SERVICE_ID", "example-service-9a25")
+PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "airflow-system-tests-303516")
+SERVICE_ID = os.environ.get("GCP_DATAPROC_METASTORE_SERVICE_ID", "wj-service-2")
+BACKUP_ID = os.environ.get("GCP_DATAPROC_METASTORE_BACKUP_ID", "wj-backup-1")
+METADATA_IMPORT_ID = os.environ.get("GCP_DATAPROC_METASTORE_METADATA_IMPORT_ID", "wj-metadata-import-1")
 REGION = os.environ.get("GCP_LOCATION", "europe-west1")
 ZONE = os.environ.get("GCP_REGION", "europe-west1-b")
 BUCKET = os.environ.get("GCP_DATAPROC_METASTORE_BUCKET", "dataproc-metastore-system-tests")
+# os.environ["GRPC_DNS_RESOLVER"] = "native"
+# os.environ["AIRFLOW__CORE__ENABLE_XCOM_PICKLING"] = "True"
 
 # Service definition.
 # Docs: https://cloud.google.com/dataproc-metastore/docs/reference/rest/v1/projects.locations.services#Service
@@ -49,6 +53,12 @@ BUCKET = os.environ.get("GCP_DATAPROC_METASTORE_BUCKET", "dataproc-metastore-sys
 
 SERVICE = {
   "name": "test-service",
+}
+BACKUP = {
+    "name": "test-backup",
+}
+METADATA_IMPORT = {
+    "name": "test-metadata-import",
 }
 
 # [END how_to_cloud_dataproc_metastore_create_service]
@@ -62,10 +72,13 @@ with models.DAG("example_gcp_dataproc_metastore", start_date=days_ago(1), schedu
         project_number=PROJECT_ID,
         service=SERVICE,
         service_id=SERVICE_ID,
+        timeout=1200,
     )
     # [END how_to_cloud_dataproc_metastore_create_service_operator]
 
+    # [START how_to_cloud_dataproc_metastore_update_service_operator]
     update_service = DataprocMetastoreUpdateServiceOperator()
+    # [END how_to_cloud_dataproc_metastore_update_service_operator]
 
     # [START how_to_cloud_dataproc_metastore_get_service_operator]
     get_service_details = DataprocMetastoreGetServiceOperator(
@@ -76,15 +89,57 @@ with models.DAG("example_gcp_dataproc_metastore", start_date=days_ago(1), schedu
     )
     # [END how_to_cloud_dataproc_metastore_get_service_operator]
 
-    import_metadata = DataprocMetastoreCreateMetadataImportOperator()
+    # [START how_to_cloud_dataproc_metastore_create_metadata_import_operator]
+    import_metadata = DataprocMetastoreCreateMetadataImportOperator(
+        task_id="create_metadata_import",
+        project_number=PROJECT_ID,
+        location_id=REGION,
+        service_id=SERVICE_ID,
+        metadata_import=METADATA_IMPORT,
+        metadata_import_id=METADATA_IMPORT_ID,
+    )
+    # [END how_to_cloud_dataproc_metastore_create_metadata_import_operator]
 
-    export_metadata = DataprocMetastoreExportMetadataOperator()
+    # [START how_to_cloud_dataproc_metastore_export_metadata_operator]
+    export_metadata = DataprocMetastoreExportMetadataOperator(
+        task_id="export_metadata",
+        destination_gcs_folder="gs://wj-dm-1/dataproc-metastore",
+        project_id=PROJECT_ID,
+        location_id=REGION,
+        service_id=SERVICE_ID,
+        timeout=1200,
+    )
+    # [END how_to_cloud_dataproc_metastore_export_metadata_operator]
 
-    backup_service = DataprocMetastoreCreateBackupOperator()
+    # [START how_to_cloud_dataproc_metastore_create_backup_operator]
+    backup_service = DataprocMetastoreCreateBackupOperator(
+        task_id="create_backup",
+        project_number=PROJECT_ID,
+        location_id=REGION,
+        service_id=SERVICE_ID,
+        backup=BACKUP,
+        backup_id=BACKUP_ID,
+    )
+    # [END how_to_cloud_dataproc_metastore_create_backup_operator]
 
-    lists_backups = DataprocMetastoreListBackupsOperator()
-    
-    delete_backup = DataprocMetastoreDeleteBackupOperator()
+    # [START how_to_cloud_dataproc_metastore_list_backups_operator]
+    lists_backups = DataprocMetastoreListBackupsOperator(
+        task_id="list_backups",
+        project_number=PROJECT_ID,
+        location_id=REGION,
+        service_id=SERVICE_ID,
+    )
+    # [END how_to_cloud_dataproc_metastore_list_backups_operator]
+
+    # [START how_to_cloud_dataproc_metastore_delete_backup_operator]
+    delete_backup = DataprocMetastoreDeleteBackupOperator(
+        task_id="delete_backup",
+        project_number=PROJECT_ID,
+        location_id=REGION,
+        service_id=SERVICE_ID,
+        backup_id=BACKUP_ID,
+    )
+    # [END how_to_cloud_dataproc_metastore_delete_backup_operator]
 
     restore_service = DataprocMetastoreRestoreServiceOperator()
 
@@ -98,13 +153,20 @@ with models.DAG("example_gcp_dataproc_metastore", start_date=days_ago(1), schedu
     # [END how_to_cloud_dataproc_metastore_delete_service_operator]
 
 
-    create_service
-    create_service >> update_service >> delete_service
-    create_service >> get_service_details >> delete_service
-    create_service >> import_metadata >> delete_service
-    create_service >> export_metadata >> delete_service
-    create_service >> backup_service >> delete_service
-    create_service >> lists_backups >> delete_service
-    create_service >> delete_backup >> delete_service
-    create_service >> restore_service >> delete_service
+    # create_service
+    # delete_service
+    # get_service_details
+    # backup_service
+    # delete_backup
+    # lists_backups
+    export_metadata
+    # backup_service >> lists_backups
+    # create_service >> update_service >> delete_service
+    # create_service >> get_service_details >> delete_service
+    # create_service >> import_metadata >> delete_service
+    # create_service >> export_metadata >> delete_service
+    # create_service >> backup_service >> delete_service
+    # create_service >> lists_backups >> delete_service
+    # create_service >> delete_backup >> delete_service
+    # create_service >> restore_service >> delete_service
 
