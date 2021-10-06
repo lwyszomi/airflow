@@ -18,19 +18,15 @@
 #
 """This module contains a Google Cloud Dataproc Metastore hook."""
 
-from time import sleep
 import warnings
-from typing import Any, Dict, Optional, Sequence, Tuple, Union
+from time import sleep
+from typing import Dict, Optional, Sequence, Tuple, Union
 
-from google.api_core.operations_v1 import OperationsClient
 from google.api_core.operation import Operation
-from google.api_core.retry import exponential_sleep_generator, Retry
+from google.api_core.operations_v1 import OperationsClient
+from google.api_core.retry import Retry, exponential_sleep_generator
 from google.cloud.metastore_v1 import DataprocMetastoreClient
-from google.cloud.metastore_v1.types import (
-    Backup,
-    MetadataImport,
-    Service,
-)
+from google.cloud.metastore_v1.types import Backup, MetadataImport, Service
 from google.cloud.metastore_v1.types.metastore import DatabaseDumpSpec, Restore
 from google.protobuf.field_mask_pb2 import FieldMask
 
@@ -39,9 +35,7 @@ from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 
 
 class DataprocMetastoreHook(GoogleBaseHook):
-    """
-    Hook for Google Cloud Dataproc Metastore APIs.
-    """
+    """Hook for Google Cloud Dataproc Metastore APIs."""
 
     def get_operation_client(self) -> OperationsClient:
         """Returns OperationClient"""
@@ -62,7 +56,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         client_options = None
         if region and region != 'global':
             client_options = {'api_endpoint': f'{region}-metastore.googleapis.com:443'}
-        
+
         return DataprocMetastoreClient(
             credentials=self._get_credentials(), client_info=self.client_info, client_options=client_options
         )
@@ -89,9 +83,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         :type operation_name: str
         :return: The new, updated operation from Google Cloud
         """
-        return self.get_operation_client().get_operation(
-            name=operation_name
-        )
+        return self.get_operation_client().get_operation(name=operation_name)
 
     def wait_for_operation(self, operation: Operation):
         """Waits for long-lasting operation to complete."""
@@ -99,7 +91,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             sleep(time_to_wait)
             if operation.done():
                 break
-        
+
         error = operation.exception()
         if error:
             raise AirflowException(error)
@@ -345,7 +337,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             },
             retry=retry,
             timeout=timeout,
-            metadata=metadata
+            metadata=metadata,
         )
         return result
 
@@ -393,7 +385,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             },
             retry=retry,
             timeout=timeout,
-            metadata=metadata
+            metadata=metadata,
         )
         return result
 
@@ -449,11 +441,11 @@ class DataprocMetastoreHook(GoogleBaseHook):
                 'destination_gcs_folder': destination_gcs_folder,
                 'service': service,
                 'request_id': request_id,
-                'database_dump_type': database_dump_type
+                'database_dump_type': database_dump_type,
             },
             retry=retry,
             timeout=timeout,
-            metadata=metadata
+            metadata=metadata,
         )
         return result
 
@@ -505,7 +497,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             },
             retry=retry,
             timeout=timeout,
-            metadata=metadata
+            metadata=metadata,
         )
         return result
 
@@ -546,7 +538,10 @@ class DataprocMetastoreHook(GoogleBaseHook):
         :param metadata: Strings which should be sent along with the request as metadata.
         :type metadata: Sequence[Tuple[str, str]]
         """
-        name = f'projects/{project_number}/locations/{location_id}/services/{service_id}/metadataImports/{import_id}'
+        name = (
+            f'projects/{project_number}/locations/{location_id}/services/{service_id}'
+            f'/metadataImports/{import_id}'
+        )
 
         client = self.get_dataproc_metastore_client()
         result = client.get_metadata_import(
@@ -555,7 +550,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             },
             retry=retry,
             timeout=timeout,
-            metadata=metadata
+            metadata=metadata,
         )
         return result
 
@@ -599,7 +594,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             },
             retry=retry,
             timeout=timeout,
-            metadata=metadata
+            metadata=metadata,
         )
         return result
 
@@ -674,7 +669,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             },
             retry=retry,
             timeout=timeout,
-            metadata=metadata
+            metadata=metadata,
         )
         return result
 
@@ -749,7 +744,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             },
             retry=retry,
             timeout=timeout,
-            metadata=metadata
+            metadata=metadata,
         )
         return result
 
@@ -815,7 +810,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             },
             retry=retry,
             timeout=timeout,
-            metadata=metadata
+            metadata=metadata,
         )
         return result
 
@@ -849,14 +844,16 @@ class DataprocMetastoreHook(GoogleBaseHook):
             This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is
             provided, this should not be set.
         :type service_id: str
-        :param backup_project_id: Required. The ID of the Google Cloud project that the metastore service backup to restore from.
+        :param backup_project_id: Required. The ID of the Google Cloud project that the metastore service
+            backup to restore from.
         :type backup_project_id: str
-        :param backup_location_id: Required. The ID of the Google Cloud location that the metastore service backup to restore from.
+        :param backup_location_id: Required. The ID of the Google Cloud location that the metastore
+            service backup to restore from.
         :type backup_location_id: str
-        :param backup_service_id:  Required. The ID of the metastore service backup to restore from, which is used as the final component of
-            the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
-            with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
-            hyphens.
+        :param backup_service_id:  Required. The ID of the metastore service backup to restore from,
+            which is used as the final component of the metastore service's name. This value must be
+            between 2 and 63 characters long inclusive, begin with a letter, end with a letter or number,
+            and consist of alpha-numeric ASCII characters or hyphens.
         :type backup_service_id: str
         :param backup_id:  Required. The ID of the metastore service backup to restore from
         :type backup_id: str
@@ -873,7 +870,10 @@ class DataprocMetastoreHook(GoogleBaseHook):
         :type metadata: Sequence[Tuple[str, str]]
         """
         service = f'projects/{project_id}/locations/{location_id}/services/{service_id}'
-        backup = f'projects/{backup_project_id}/locations/{backup_location_id}/services/{backup_service_id}/backups/{backup_id}'
+        backup = (
+            f'projects/{backup_project_id}/locations/{backup_location_id}/services/'
+            f'{backup_service_id}/backups/{backup_id}'
+        )
 
         client = self.get_dataproc_metastore_client()
         result = client.restore_service(
@@ -940,7 +940,10 @@ class DataprocMetastoreHook(GoogleBaseHook):
 
     def update_service(
         self,
-        service: Service,
+        project_id: str,
+        location_id: str,
+        service_id: str,
+        service: Union[Dict, Service],
         update_mask: FieldMask,
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
@@ -950,6 +953,18 @@ class DataprocMetastoreHook(GoogleBaseHook):
         """
         Updates the parameters of a single service.
 
+        :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
+        :type project_id: str
+        :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
+        :type location_id: str
+        :param service_id:  Required. The ID of the metastore service, which is used as the final component of
+            the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
+            with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
+            hyphens.
+
+            This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is
+            provided, this should not be set.
+        :type service_id: str
         :param service:  Required. The metastore service to update. The server only merges fields in the
             service if they are specified in ``update_mask``.
 
@@ -957,7 +972,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
 
             This corresponds to the ``service`` field on the ``request`` instance; if ``request`` is provided,
             this should not be set.
-        :type service: google.cloud.metastore_v1.types.Service
+        :type service: Union[Dict, google.cloud.metastore_v1.types.Service]
         :param update_mask:  Required. A field mask used to specify the fields to be overwritten in the
             metastore service resource by the update. Fields specified in the ``update_mask`` are relative to
             the resource (not to the full request). A field is overwritten if it is in the mask.
@@ -975,6 +990,11 @@ class DataprocMetastoreHook(GoogleBaseHook):
         :type metadata: Sequence[Tuple[str, str]]
         """
         client = self.get_dataproc_metastore_client()
+
+        service_name = f'projects/{project_id}/locations/{location_id}/services/{service_id}'
+
+        service["name"] = service_name
+
         result = client.update_service(
             request={
                 'service': service,

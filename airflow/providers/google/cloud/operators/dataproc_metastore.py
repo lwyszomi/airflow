@@ -21,19 +21,13 @@
 from typing import Dict, Optional, Sequence, Tuple, Union
 
 from google.api_core.retry import Retry
-from googleapiclient.errors import HttpError
-from google.cloud.metastore_v1.types import (
-    Backup,
-    MetadataImport,
-    Service,
-)
+from google.cloud.metastore_v1.types import Backup, MetadataImport, Service
 from google.cloud.metastore_v1.types.metastore import DatabaseDumpSpec, Restore
 from google.protobuf.field_mask_pb2 import FieldMask
+from googleapiclient.errors import HttpError
 
-# from airflow.exceptions import AirflowException
-from airflow.providers.google.cloud.hooks.dataproc_metastore import DataprocMetastoreHook
-# from airflow.contrib.hooks.gcp_api_base_hook import GoogleCloudBaseHook
 from airflow.models import BaseOperator
+from airflow.providers.google.cloud.hooks.dataproc_metastore import DataprocMetastoreHook
 
 
 class DataprocMetastoreGetDefaultMtlsEndpointOperator(BaseOperator):
@@ -50,11 +44,7 @@ class DataprocMetastoreGetDefaultMtlsEndpointOperator(BaseOperator):
     """
 
     def __init__(
-        self,
-        api_endpoint: str = None,
-        gcp_conn_id: str = "google_cloud_default",
-        *args,
-        **kwargs
+        self, api_endpoint: str = None, gcp_conn_id: str = "google_cloud_default", *args, **kwargs
     ) -> None:
         super().__init__(*args, **kwargs)
         self.api_endpoint = api_endpoint
@@ -136,7 +126,7 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.project_number = project_number
@@ -257,7 +247,7 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.project_number = project_number
@@ -277,7 +267,7 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
             gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
         self.log.info("Creating Dataproc Metastore metadata import: %s", self.metadata_import_id)
-        hook.create_metadata_import(
+        operation = hook.create_metadata_import(
             project_number=self.project_number,
             location_id=self.location_id,
             service_id=self.service_id,
@@ -288,6 +278,9 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
             timeout=self.timeout,
             metadata=self.metadata,
         )
+        metadata_import = hook.wait_for_operation(operation)
+        self.log.info("Metadata import %s created successfully", self.metadata_import_id)
+        return metadata_import
 
 
 class DataprocMetastoreCreateServiceOperator(BaseOperator):
@@ -353,7 +346,7 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.location_id = location_id
@@ -462,7 +455,7 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.project_number = project_number
@@ -530,7 +523,7 @@ class DataprocMetastoreDeleteServiceOperator(BaseOperator):
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.location_id = location_id
@@ -619,8 +612,7 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.destination_gcs_folder = destination_gcs_folder
@@ -706,7 +698,7 @@ class DataprocMetastoreGetServiceOperator(BaseOperator):
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.location_id = location_id
@@ -789,7 +781,7 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.project_number = project_number
@@ -841,14 +833,16 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
         This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is
         provided, this should not be set.
     :type service_id: str
-    :param backup_project_id: Required. The ID of the Google Cloud project that the metastore service backup to restore from.
+    :param backup_project_id: Required. The ID of the Google Cloud project that the metastore s
+        ervice backup to restore from.
     :type backup_project_id: str
-    :param backup_location_id: Required. The ID of the Google Cloud location that the metastore service backup to restore from.
+    :param backup_location_id: Required. The ID of the Google Cloud location that the metastore
+        service backup to restore from.
     :type backup_location_id: str
-    :param backup_service_id:  Required. The ID of the metastore service backup to restore from, which is used as the final component of
-        the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
-        with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
-        hyphens.
+    :param backup_service_id:  Required. The ID of the metastore service backup to restore from, which is
+        used as the final component of the metastore service's name. This value must be between 2 and 63
+        characters long inclusive, begin with a letter, end with a letter or number, and consist
+        of alpha-numeric ASCII characters or hyphens.
     :type backup_service_id: str
     :param backup_id:  Required. The ID of the metastore service backup to restore from
     :type backup_id: str
@@ -895,10 +889,10 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
         self.project_id = project_id
@@ -920,7 +914,9 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
         hook = DataprocMetastoreHook(
             gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
-        self.log.info("Restoring Dataproc Metastore service: %s from backup: %s", self.service_id, self.backup_id)
+        self.log.info(
+            "Restoring Dataproc Metastore service: %s from backup: %s", self.service_id, self.backup_id
+        )
         operation = hook.restore_service(
             project_id=self.project_id,
             location_id=self.location_id,
@@ -943,6 +939,18 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
     """
     Updates the parameters of a single service.
 
+    :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
+    :type project_id: str
+    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
+    :type location_id: str
+    :param service_id:  Required. The ID of the metastore service, which is used as the final component of
+        the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
+        with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
+        hyphens.
+
+        This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is
+        provided, this should not be set.
+    :type service_id: str
     :param service:  Required. The metastore service to update. The server only merges fields in the service
         if they are specified in ``update_mask``.
 
@@ -950,7 +958,7 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
 
         This corresponds to the ``service`` field on the ``request`` instance; if ``request`` is provided,
         this should not be set.
-    :type service: google.cloud.metastore_v1.types.Service
+    :type service: Union[Dict, google.cloud.metastore_v1.types.Service]
     :param update_mask:  Required. A field mask used to specify the fields to be overwritten in the metastore
         service resource by the update. Fields specified in the ``update_mask`` are relative to the resource
         (not to the full request). A field is overwritten if it is in the mask.
@@ -987,17 +995,23 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
     def __init__(
         self,
         *,
-        service: Service,
-        update_mask: FieldMask,
+        project_id: str,
+        location_id: str,
+        service_id: str,
+        service: Union[Dict, Service],
+        update_mask: Union[Dict, FieldMask],
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
-        metadata: Optional[Sequence[Tuple[str, str]]] = None,
+        metadata: Optional[Sequence[Tuple[str, str]]] = (),
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
-        **kwargs
+        **kwargs,
     ) -> None:
         super().__init__(**kwargs)
+        self.project_id = project_id
+        self.location_id = location_id
+        self.service_id = service_id
         self.service = service
         self.update_mask = update_mask
         self.request_id = request_id
@@ -1011,10 +1025,12 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
         hook = DataprocMetastoreHook(
             gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
-        self.log.info("Updating Dataproc Metastore service: %s", self.service_id)
+        self.log.info("Updating Dataproc Metastore service: %s", self.service.get("name"))
 
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
         operation = hook.update_service(
+            project_id=self.project_id,
+            location_id=self.location_id,
+            service_id=self.service_id,
             service=self.service,
             update_mask=self.update_mask,
             request_id=self.request_id,
@@ -1023,4 +1039,4 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
             metadata=self.metadata,
         )
         hook.wait_for_operation(operation)
-        self.log.info("Service %s updated successfully", self.service_id)
+        self.log.info("Service %s updated successfully", self.service.get("name"))
