@@ -23,7 +23,6 @@ from time import sleep
 from typing import Dict, Optional, Sequence, Tuple, Union
 
 from google.api_core.operation import Operation
-from google.api_core.operations_v1 import OperationsClient
 from google.api_core.retry import Retry, exponential_sleep_generator
 from google.cloud.metastore_v1 import DataprocMetastoreClient
 from google.cloud.metastore_v1.types import Backup, MetadataImport, Service
@@ -36,10 +35,6 @@ from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 
 class DataprocMetastoreHook(GoogleBaseHook):
     """Hook for Google Cloud Dataproc Metastore APIs."""
-
-    def get_operation_client(self) -> OperationsClient:
-        """Returns OperationClient"""
-        return OperationsClient()
 
     def get_dataproc_metastore_client(
         self, region: Optional[str] = None, location: Optional[str] = None
@@ -74,16 +69,6 @@ class DataprocMetastoreHook(GoogleBaseHook):
         client = self.get_dataproc_metastore_client()
         result = client._get_default_mtls_endpoint(api_endpoint=api_endpoint)
         return result
-
-    def get_operation(self, operation_name: str):
-        """
-        Fetches the operation from Google Cloud
-
-        :param operation_name: Name of operation to fetch
-        :type operation_name: str
-        :return: The new, updated operation from Google Cloud
-        """
-        return self.get_operation_client().get_operation(name=operation_name)
 
     def wait_for_operation(self, operation: Operation):
         """Waits for long-lasting operation to complete."""

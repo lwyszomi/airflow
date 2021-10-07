@@ -118,7 +118,7 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
         project_number: str,
         location_id: str,
         service_id: str,
-        backup: Backup,
+        backup: Union[Dict, Backup],
         backup_id: str,
         request_id: Optional[str] = None,
         retry: Optional[Retry] = None,
@@ -146,6 +146,7 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
             gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
         self.log.info("Creating Dataproc Metastore backup: %s", self.backup_id)
+
         try:
             operation = hook.create_backup(
                 project_number=self.project_number,

@@ -162,7 +162,16 @@ with models.DAG("example_gcp_dataproc_metastore", start_date=days_ago(1), schedu
     )
     # [END how_to_cloud_dataproc_metastore_delete_backup_operator]
 
-    restore_service = DataprocMetastoreRestoreServiceOperator()
+    restore_service = DataprocMetastoreRestoreServiceOperator(
+        task_id="restore_metastore",
+        location_id=REGION,
+        project_id=PROJECT_ID,
+        service_id=SERVICE_ID,
+        backup_id=BACKUP_ID,
+        backup_location_id=REGION,
+        backup_project_id=PROJECT_ID,
+        backup_service_id=SERVICE_ID,
+    )
 
     # [START how_to_cloud_dataproc_metastore_delete_service_operator]
     delete_service = DataprocMetastoreDeleteServiceOperator(
@@ -173,19 +182,11 @@ with models.DAG("example_gcp_dataproc_metastore", start_date=days_ago(1), schedu
     )
     # [END how_to_cloud_dataproc_metastore_delete_service_operator]
 
-    # create_service
-    # delete_service
-    # get_service_details
-    # backup_service
-    # delete_backup
-    # lists_backups
-    export_metadata
-    # backup_service >> lists_backups
-    # create_service >> update_service >> delete_service
-    # create_service >> get_service_details >> delete_service
-    # create_service >> import_metadata >> delete_service
-    # create_service >> export_metadata >> delete_service
-    # create_service >> backup_service >> delete_service
-    # create_service >> lists_backups >> delete_service
-    # create_service >> delete_backup >> delete_service
-    # create_service >> restore_service >> delete_service
+    create_service >> update_service >> get_service_details
+
+    get_service_details >> backup_service >> lists_backups >> restore_service >> delete_backup
+
+    # TODO: export metadata doesn't work correctly we need to wait for fix
+    # get_service_details >> export_metadata >> import_metadata
+
+    delete_backup >> delete_service
