@@ -18,14 +18,17 @@
 #
 """This module contains Google Dataproc Metastore operators."""
 
+from time import sleep
 from typing import Dict, Optional, Sequence, Tuple, Union
 
-from google.api_core.retry import Retry
+from google.api_core.retry import Retry, exponential_sleep_generator
+from google.cloud.metastore_v1 import MetadataExport, MetadataManagementActivity
 from google.cloud.metastore_v1.types import Backup, MetadataImport, Service
 from google.cloud.metastore_v1.types.metastore import DatabaseDumpSpec, Restore
 from google.protobuf.field_mask_pb2 import FieldMask
 from googleapiclient.errors import HttpError
 
+from airflow import AirflowException
 from airflow.models import BaseOperator
 from airflow.providers.google.cloud.hooks.dataproc_metastore import DataprocMetastoreHook
 
@@ -633,7 +636,7 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
             gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
         self.log.info("Exporting metadata from Dataproc Metastore service: %s", self.service_id)
-        operation = hook.export_metadata(
+        hook.export_metadata(
             destination_gcs_folder=self.destination_gcs_folder,
             project_id=self.project_id,
             location_id=self.location_id,
@@ -644,8 +647,33 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
             timeout=self.timeout,
             metadata=self.metadata,
         )
-        hook.wait_for_operation(operation)
+        metadata_export = self._wait_for_export_metadata(hook)
         self.log.info("Metadata from service %s exported successfully", self.service_id)
+        return MetadataExport.to_dict(metadata_export)
+
+    def _wait_for_export_metadata(self, hook: DataprocMetastoreHook):
+        """
+        TODO: workaround to check that export was created successfully,
+        We discovered a issue to parse result to MetadataExport inside the SDK
+        """
+        for time_to_wait in exponential_sleep_generator(initial=10, maximum=120):
+            sleep(time_to_wait)
+            service = hook.get_service(
+                location_id=self.location_id,
+                project_number=self.project_id,
+                service_id=self.service_id,
+                retry=self.retry,
+                timeout=self.timeout,
+                metadata=self.metadata,
+            )
+            activities: MetadataManagementActivity = service.metadata_management_activity
+            metadata_export: MetadataExport = activities.metadata_exports[0]
+            if metadata_export.state == MetadataExport.State.SUCCEEDED:
+                return metadata_export
+            if metadata_export.state == MetadataExport.State.FAILED:
+                raise AirflowException(
+                    f"Exporting metadata from Dataproc Metastore {metadata_export.name} FAILED"
+                )
 
 
 class DataprocMetastoreGetServiceOperator(BaseOperator):

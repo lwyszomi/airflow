@@ -186,7 +186,6 @@ with models.DAG("example_gcp_dataproc_metastore", start_date=days_ago(1), schedu
 
     get_service_details >> backup_service >> lists_backups >> restore_service >> delete_backup
 
-    # TODO: export metadata doesn't work correctly we need to wait for fix
-    # get_service_details >> export_metadata >> import_metadata
+    delete_backup >> export_metadata >> import_metadata
 
-    delete_backup >> delete_service
+    import_metadata >> delete_service
