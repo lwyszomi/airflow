@@ -108,7 +108,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         """
         parent = f'projects/{project_id}/locations/{region}/services/{service_id}'
 
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
         result = client.create_backup(
             request={
                 'parent': parent,
@@ -174,7 +174,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         """
         parent = f'projects/{project_id}/locations/{region}/services/{service_id}'
 
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
         result = client.create_metadata_import(
             request={
                 'parent': parent,
@@ -231,7 +231,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         """
         parent = f'projects/{project_id}/locations/{region}'
 
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
         result = client.create_service(
             request={
                 'parent': parent,
@@ -289,7 +289,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         """
         name = f'projects/{project_id}/locations/{region}/services/{service_id}/backups/{backup_id}'
 
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
         result = client.delete_backup(
             request={
                 'name': name,
@@ -337,7 +337,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         """
         name = f'projects/{project_id}/locations/{region}/services/{service_id}'
 
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
         result = client.delete_service(
             request={
                 'name': name,
@@ -395,7 +395,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         """
         service = f'projects/{project_id}/locations/{region}/services/{service_id}'
 
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
         result = client.export_metadata(
             request={
                 'destination_gcs_folder': destination_gcs_folder,
@@ -442,7 +442,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         """
         name = f'projects/{project_id}/locations/{region}/services/{service_id}'
 
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
         result = client.get_service(
             request={
                 'name': name,
@@ -513,7 +513,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         """
         parent = f'projects/{project_id}/locations/{region}/services/{service_id}/backups'
 
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
         result = client.list_backups(
             request={
                 'parent': parent,
@@ -589,7 +589,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
             f'{backup_service_id}/backups/{backup_id}'
         )
 
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
         result = client.restore_service(
             request={
                 'service': service,
@@ -654,7 +654,7 @@ class DataprocMetastoreHook(GoogleBaseHook):
         :param metadata: Strings which should be sent along with the request as metadata.
         :type metadata: Sequence[Tuple[str, str]]
         """
-        client = self.get_dataproc_metastore_client()
+        client = self.get_dataproc_metastore_client(region=region)
 
         service_name = f'projects/{project_id}/locations/{region}/services/{service_id}'
 
