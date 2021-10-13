@@ -33,39 +33,14 @@ from airflow.models import BaseOperator
 from airflow.providers.google.cloud.hooks.dataproc_metastore import DataprocMetastoreHook
 
 
-class DataprocMetastoreGetDefaultMtlsEndpointOperator(BaseOperator):
-    """
-    Converts api endpoint to mTLS endpoint.
-
-            Convert "*.sandbox.googleapis.com" and "*.googleapis.com" to "*.mtls.sandbox.googleapis.com" and
-    "*.mtls.googleapis.com" respectively.
-
-    :param api_endpoint: the api endpoint to convert.
-    :type api_endpoint: str
-    :param gcp_conn_id:
-    :type gcp_conn_id: str
-    """
-
-    def __init__(
-        self, api_endpoint: str = None, gcp_conn_id: str = "google_cloud_default", *args, **kwargs
-    ) -> None:
-        super().__init__(*args, **kwargs)
-        self.api_endpoint = api_endpoint
-        self.gcp_conn_id = gcp_conn_id
-
-    def execute(self, context: Dict):
-        hook = DataprocMetastoreHook(gcp_conn_id=self.gcp_conn_id)
-        hook._get_default_mtls_endpoint(api_endpoint=self.api_endpoint)
-
-
 class DataprocMetastoreCreateBackupOperator(BaseOperator):
     """
     Creates a new backup in a given project and location.
 
-    :param project_number: Required. The ID of the Google Cloud project that the service belongs to.
-    :type project_number: str
-    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
-    :type location_id: str
+    :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
+    :type project_id: str
+    :param region: Required. The ID of the Google Cloud region that the service belongs to.
+    :type region: str
     :param service_id:  Required. The ID of the metastore service, which is used as the final component of
         the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
         with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
@@ -109,7 +84,7 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
     """
 
     template_fields = (
-        'project_number',
+        'project_id',
         'backup',
         'impersonation_chain',
     )
@@ -118,8 +93,8 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
     def __init__(
         self,
         *,
-        project_number: str,
-        location_id: str,
+        project_id: str,
+        region: str,
         service_id: str,
         backup: Union[Dict, Backup],
         backup_id: str,
@@ -132,8 +107,8 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.project_number = project_number
-        self.location_id = location_id
+        self.project_id = project_id
+        self.region = region
         self.service_id = service_id
         self.backup = backup
         self.backup_id = backup_id
@@ -152,8 +127,8 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
 
         try:
             operation = hook.create_backup(
-                project_number=self.project_number,
-                location_id=self.location_id,
+                project_id=self.project_id,
+                region=self.region,
                 service_id=self.service_id,
                 backup=self.backup,
                 backup_id=self.backup_id,
@@ -169,8 +144,8 @@ class DataprocMetastoreCreateBackupOperator(BaseOperator):
                 raise
             self.log.info("Backup %s already exists", self.backup_id)
             backup = hook.get_backup(
-                project_number=self.project_number,
-                location_id=self.location_id,
+                project_id=self.project_id,
+                region=self.region,
                 service_id=self.service_id,
                 backup_id=self.backup_id,
                 retry=self.retry,
@@ -184,10 +159,10 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
     """
     Creates a new MetadataImport in a given project and location.
 
-    :param project_number: Required. The ID of the Google Cloud project that the service belongs to.
-    :type project_number: str
-    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
-    :type location_id: str
+    :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
+    :type project_id: str
+    :param region: Required. The ID of the Google Cloud region that the service belongs to.
+    :type region: str
     :param service_id:  Required. The ID of the metastore service, which is used as the final component of
         the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
         with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
@@ -231,7 +206,7 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
     """
 
     template_fields = (
-        'project_number',
+        'project_id',
         'metadata_import',
         'impersonation_chain',
     )
@@ -240,8 +215,8 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
     def __init__(
         self,
         *,
-        project_number: str,
-        location_id: str,
+        project_id: str,
+        region: str,
         service_id: str,
         metadata_import: MetadataImport,
         metadata_import_id: str,
@@ -254,8 +229,8 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.project_number = project_number
-        self.location_id = location_id
+        self.project_id = project_id
+        self.region = region
         self.service_id = service_id
         self.metadata_import = metadata_import
         self.metadata_import_id = metadata_import_id
@@ -272,8 +247,8 @@ class DataprocMetastoreCreateMetadataImportOperator(BaseOperator):
         )
         self.log.info("Creating Dataproc Metastore metadata import: %s", self.metadata_import_id)
         operation = hook.create_metadata_import(
-            project_number=self.project_number,
-            location_id=self.location_id,
+            project_id=self.project_id,
+            region=self.region,
             service_id=self.service_id,
             metadata_import=self.metadata_import,
             metadata_import_id=self.metadata_import_id,
@@ -291,10 +266,10 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
     """
     Creates a metastore service in a project and location.
 
-    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
-    :type location_id: str
-    :param project_number: Required. The ID of the Google Cloud project that the service belongs to.
-    :type project_number: str
+    :param region: Required. The ID of the Google Cloud region that the service belongs to.
+    :type region: str
+    :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
+    :type project_id: str
     :param service:  Required. The Metastore service to create. The ``name`` field is ignored. The ID of
         the created metastore service must be provided in the request's ``service_id`` field.
 
@@ -331,7 +306,7 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
     """
 
     template_fields = (
-        'project_number',
+        'project_id',
         'service',
         'impersonation_chain',
     )
@@ -340,8 +315,8 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
     def __init__(
         self,
         *,
-        location_id: str,
-        project_number: str,
+        region: str,
+        project_id: str,
         service: Optional[Union[Dict, Service]] = None,
         service_id: str,
         request_id: Optional[str] = None,
@@ -353,8 +328,8 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.location_id = location_id
-        self.project_number = project_number
+        self.region = region
+        self.project_id = project_id
         self.service = service
         self.service_id = service_id
         self.request_id = request_id
@@ -368,11 +343,11 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
         hook = DataprocMetastoreHook(
             gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
-        self.log.info("Creating Dataproc Metastore service: %s", self.project_number)
+        self.log.info("Creating Dataproc Metastore service: %s", self.project_id)
         try:
             operation = hook.create_service(
-                location_id=self.location_id,
-                project_number=self.project_number,
+                region=self.region,
+                project_id=self.project_id,
                 service=self.service,
                 service_id=self.service_id,
                 request_id=self.request_id,
@@ -387,8 +362,8 @@ class DataprocMetastoreCreateServiceOperator(BaseOperator):
                 raise
             self.log.info("Instance %s already exists", self.service_id)
             service = hook.get_service(
-                location_id=self.location_id,
-                project_number=self.project_number,
+                region=self.region,
+                project_id=self.project_id,
                 service_id=self.service_id,
                 retry=self.retry,
                 timeout=self.timeout,
@@ -401,10 +376,10 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
     """
     Deletes a single backup.
 
-    :param project_number: Required. The ID of the Google Cloud project that the backup belongs to.
-    :type project_number: str
-    :param location_id: Required. The ID of the Google Cloud location that the backup belongs to.
-    :type location_id: str
+    :param project_id: Required. The ID of the Google Cloud project that the backup belongs to.
+    :type project_id: str
+    :param region: Required. The ID of the Google Cloud region that the backup belongs to.
+    :type region: str
     :param service_id: Required. The ID of the metastore service, which is used as the final component of
         the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
         with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
@@ -442,15 +417,15 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
     """
 
     template_fields = (
-        'project_number',
+        'project_id',
         'impersonation_chain',
     )
 
     def __init__(
         self,
         *,
-        project_number: str,
-        location_id: str,
+        project_id: str,
+        region: str,
         service_id: str,
         backup_id: str,
         request_id: Optional[str] = None,
@@ -462,8 +437,8 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.project_number = project_number
-        self.location_id = location_id
+        self.project_id = project_id
+        self.region = region
         self.service_id = service_id
         self.backup_id = backup_id
         self.request_id = request_id
@@ -479,8 +454,8 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
         )
         self.log.info("Deleting Dataproc Metastore backup: %s", self.backup_id)
         operation = hook.delete_backup(
-            project_number=self.project_number,
-            location_id=self.location_id,
+            project_id=self.project_id,
+            region=self.region,
             service_id=self.service_id,
             backup_id=self.backup_id,
             request_id=self.request_id,
@@ -489,7 +464,7 @@ class DataprocMetastoreDeleteBackupOperator(BaseOperator):
             metadata=self.metadata,
         )
         hook.wait_for_operation(operation)
-        self.log.info("Backup %s deleted successfully", self.project_number)
+        self.log.info("Backup %s deleted successfully", self.project_id)
 
 
 class DataprocMetastoreDeleteServiceOperator(BaseOperator):
@@ -499,8 +474,8 @@ class DataprocMetastoreDeleteServiceOperator(BaseOperator):
     :param request:  The request object. Request message for
         [DataprocMetastore.DeleteService][google.cloud.metastore.v1.DataprocMetastore.DeleteService].
     :type request: google.cloud.metastore_v1.types.DeleteServiceRequest
-    :param project_number: TODO: Fill description
-    :type project_number: str
+    :param project_id: TODO: Fill description
+    :type project_id: str
     :param retry: Designation of what errors, if any, should be retried.
     :type retry: google.api_core.retry.Retry
     :param timeout: The timeout for this request.
@@ -512,15 +487,15 @@ class DataprocMetastoreDeleteServiceOperator(BaseOperator):
     """
 
     template_fields = (
-        'project_number',
+        'project_id',
         'impersonation_chain',
     )
 
     def __init__(
         self,
         *,
-        location_id: str,
-        project_number: str,
+        region: str,
+        project_id: str,
         service_id: str,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
@@ -530,8 +505,8 @@ class DataprocMetastoreDeleteServiceOperator(BaseOperator):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.location_id = location_id
-        self.project_number = project_number
+        self.region = region
+        self.project_id = project_id
         self.service_id = service_id
         self.retry = retry
         self.timeout = timeout
@@ -543,17 +518,17 @@ class DataprocMetastoreDeleteServiceOperator(BaseOperator):
         hook = DataprocMetastoreHook(
             gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
-        self.log.info("Deleting Dataproc Metastore service: %s", self.project_number)
+        self.log.info("Deleting Dataproc Metastore service: %s", self.project_id)
         operation = hook.delete_service(
-            location_id=self.location_id,
-            project_number=self.project_number,
+            region=self.region,
+            project_id=self.project_id,
             service_id=self.service_id,
             retry=self.retry,
             timeout=self.timeout,
             metadata=self.metadata,
         )
         hook.wait_for_operation(operation)
-        self.log.info("Service %s deleted successfully", self.project_number)
+        self.log.info("Service %s deleted successfully", self.project_id)
 
 
 class DataprocMetastoreExportMetadataOperator(BaseOperator):
@@ -567,8 +542,8 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
     :type destination_gcs_folder: str
     :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
     :type project_id: str
-    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
-    :type location_id: str
+    :param region: Required. The ID of the Google Cloud region that the service belongs to.
+    :type region: str
     :param service_id:  Required. The ID of the metastore service, which is used as the final component of
         the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
         with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
@@ -607,7 +582,7 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
         *,
         destination_gcs_folder: str,
         project_id: str,
-        location_id: str,
+        region: str,
         service_id: str,
         request_id: Optional[str] = None,
         database_dump_type: Optional[DatabaseDumpSpec] = None,
@@ -621,7 +596,7 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
         super().__init__(**kwargs)
         self.destination_gcs_folder = destination_gcs_folder
         self.project_id = project_id
-        self.location_id = location_id
+        self.region = region
         self.service_id = service_id
         self.request_id = request_id
         self.database_dump_type = database_dump_type
@@ -639,7 +614,7 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
         hook.export_metadata(
             destination_gcs_folder=self.destination_gcs_folder,
             project_id=self.project_id,
-            location_id=self.location_id,
+            region=self.region,
             service_id=self.service_id,
             request_id=self.request_id,
             database_dump_type=self.database_dump_type,
@@ -659,8 +634,8 @@ class DataprocMetastoreExportMetadataOperator(BaseOperator):
         for time_to_wait in exponential_sleep_generator(initial=10, maximum=120):
             sleep(time_to_wait)
             service = hook.get_service(
-                location_id=self.location_id,
-                project_number=self.project_id,
+                region=self.region,
+                project_id=self.project_id,
                 service_id=self.service_id,
                 retry=self.retry,
                 timeout=self.timeout,
@@ -680,10 +655,10 @@ class DataprocMetastoreGetServiceOperator(BaseOperator):
     """
     Gets the details of a single service.
 
-    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
-    :type location_id: str
-    :param project_number: Required. The ID of the Google Cloud project that the service belongs to.
-    :type project_number: str
+    :param region: Required. The ID of the Google Cloud region that the service belongs to.
+    :type region: str
+    :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
+    :type project_id: str
     :param service_id:  Required. The ID of the metastore service, which is used as the final component of
         the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
         with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
@@ -712,15 +687,15 @@ class DataprocMetastoreGetServiceOperator(BaseOperator):
     """
 
     template_fields = (
-        'project_number',
+        'project_id',
         'impersonation_chain',
     )
 
     def __init__(
         self,
         *,
-        location_id: str,
-        project_number: str,
+        region: str,
+        project_id: str,
         service_id: str,
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
@@ -730,8 +705,8 @@ class DataprocMetastoreGetServiceOperator(BaseOperator):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.location_id = location_id
-        self.project_number = project_number
+        self.region = region
+        self.project_id = project_id
         self.service_id = service_id
         self.retry = retry
         self.timeout = timeout
@@ -743,10 +718,10 @@ class DataprocMetastoreGetServiceOperator(BaseOperator):
         hook = DataprocMetastoreHook(
             gcp_conn_id=self.gcp_conn_id, impersonation_chain=self.impersonation_chain
         )
-        self.log.info("Gets the details of a single Dataproc Metastore service: %s", self.project_number)
+        self.log.info("Gets the details of a single Dataproc Metastore service: %s", self.project_id)
         result = hook.get_service(
-            location_id=self.location_id,
-            project_number=self.project_number,
+            region=self.region,
+            project_id=self.project_id,
             service_id=self.service_id,
             retry=self.retry,
             timeout=self.timeout,
@@ -759,10 +734,10 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
     """
     Lists backups in a service.
 
-    :param project_number: Required. The ID of the Google Cloud project that the backup belongs to.
-    :type project_number: str
-    :param location_id: Required. The ID of the Google Cloud location that the backup belongs to.
-    :type location_id: str
+    :param project_id: Required. The ID of the Google Cloud project that the backup belongs to.
+    :type project_id: str
+    :param region: Required. The ID of the Google Cloud region that the backup belongs to.
+    :type region: str
     :param service_id: Required. The ID of the metastore service, which is used as the final component of
         the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
         with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
@@ -791,15 +766,15 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
     """
 
     template_fields = (
-        'project_number',
+        'project_id',
         'impersonation_chain',
     )
 
     def __init__(
         self,
         *,
-        project_number: str,
-        location_id: str,
+        project_id: str,
+        region: str,
         service_id: str,
         page_size: Optional[int] = None,
         page_token: Optional[str] = None,
@@ -813,8 +788,8 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
-        self.project_number = project_number
-        self.location_id = location_id
+        self.project_id = project_id
+        self.region = region
         self.service_id = service_id
         self.page_size = page_size
         self.page_token = page_token
@@ -832,8 +807,8 @@ class DataprocMetastoreListBackupsOperator(BaseOperator):
         )
         self.log.info("Listing Dataproc Metastore backups: %s", self.service_id)
         backups = hook.list_backups(
-            project_number=self.project_number,
-            location_id=self.location_id,
+            project_id=self.project_id,
+            region=self.region,
             service_id=self.service_id,
             page_size=self.page_size,
             page_token=self.page_token,
@@ -852,8 +827,8 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
 
     :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
     :type project_id: str
-    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
-    :type location_id: str
+    :param region: Required. The ID of the Google Cloud region that the service belongs to.
+    :type region: str
     :param service_id: Required. The ID of the metastore service, which is used as the final component of
         the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
         with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
@@ -862,12 +837,12 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
         This corresponds to the ``service_id`` field on the ``request`` instance; if ``request`` is
         provided, this should not be set.
     :type service_id: str
-    :param backup_project_id: Required. The ID of the Google Cloud project that the metastore s
-        ervice backup to restore from.
-    :type backup_project_id: str
-    :param backup_location_id: Required. The ID of the Google Cloud location that the metastore
+    :param backup_project_id: Required. The ID of the Google Cloud project that the metastore
         service backup to restore from.
-    :type backup_location_id: str
+    :type backup_project_id: str
+    :param backup_region: Required. The ID of the Google Cloud region that the metastore
+        service backup to restore from.
+    :type backup_region: str
     :param backup_service_id:  Required. The ID of the metastore service backup to restore from, which is
         used as the final component of the metastore service's name. This value must be between 2 and 63
         characters long inclusive, begin with a letter, end with a letter or number, and consist
@@ -908,10 +883,10 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
         self,
         *,
         project_id: str,
-        location_id: str,
+        region: str,
         service_id: str,
         backup_project_id: str,
-        backup_location_id: str,
+        backup_region: str,
         backup_service_id: str,
         backup_id: str,
         restore_type: Optional[Restore] = None,
@@ -925,10 +900,10 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
     ) -> None:
         super().__init__(**kwargs)
         self.project_id = project_id
-        self.location_id = location_id
+        self.region = region
         self.service_id = service_id
         self.backup_project_id = backup_project_id
-        self.backup_location_id = backup_location_id
+        self.backup_region = backup_region
         self.backup_service_id = backup_service_id
         self.backup_id = backup_id
         self.restore_type = restore_type
@@ -948,10 +923,10 @@ class DataprocMetastoreRestoreServiceOperator(BaseOperator):
         )
         operation = hook.restore_service(
             project_id=self.project_id,
-            location_id=self.location_id,
+            region=self.region,
             service_id=self.service_id,
             backup_project_id=self.backup_project_id,
-            backup_location_id=self.backup_location_id,
+            backup_region=self.backup_region,
             backup_service_id=self.backup_service_id,
             backup_id=self.backup_id,
             restore_type=self.restore_type,
@@ -970,8 +945,8 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
 
     :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
     :type project_id: str
-    :param location_id: Required. The ID of the Google Cloud location that the service belongs to.
-    :type location_id: str
+    :param region: Required. The ID of the Google Cloud region that the service belongs to.
+    :type region: str
     :param service_id:  Required. The ID of the metastore service, which is used as the final component of
         the metastore service's name. This value must be between 2 and 63 characters long inclusive, begin
         with a letter, end with a letter or number, and consist of alpha-numeric ASCII characters or
@@ -1025,7 +1000,7 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
         self,
         *,
         project_id: str,
-        location_id: str,
+        region: str,
         service_id: str,
         service: Union[Dict, Service],
         update_mask: Union[Dict, FieldMask],
@@ -1039,7 +1014,7 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
     ) -> None:
         super().__init__(**kwargs)
         self.project_id = project_id
-        self.location_id = location_id
+        self.region = region
         self.service_id = service_id
         self.service = service
         self.update_mask = update_mask
@@ -1058,7 +1033,7 @@ class DataprocMetastoreUpdateServiceOperator(BaseOperator):
 
         operation = hook.update_service(
             project_id=self.project_id,
-            location_id=self.location_id,
+            region=self.region,
             service_id=self.service_id,
             service=self.service,
             update_mask=self.update_mask,
