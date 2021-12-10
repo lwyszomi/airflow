@@ -92,6 +92,7 @@ Dataflow
 Dataframe
 Datalake
 Datanodes
+Dataplex
 Dataprep
 Dataproc
 Dataset
@@ -416,6 +417,7 @@ Zsh
 Zymergen
 abc
 accessor
+accountmaking
 aci
 ack
 ackIds
@@ -636,6 +638,7 @@ dataflow
 dataframe
 dataframes
 datapipe
+dataplex
 datapoint
 dataproc
 dataset
