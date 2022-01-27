@@ -805,6 +805,12 @@ extra-links:
   - airflow.providers.google.cloud.operators.mlengine.AIPlatformConsoleLink
   - airflow.providers.google.cloud.operators.dataproc.DataprocJobLink
   - airflow.providers.google.cloud.operators.dataproc.DataprocClusterLink
+  - airflow.providers.google.cloud.operators.dataproc_metastore.DataprocMetastoreBackupLink
+  - airflow.providers.google.cloud.operators.dataproc_metastore.DataprocMetastoreBackupsLink
+  - airflow.providers.google.cloud.operators.dataproc_metastore.DataprocMetastoreExportLink
+  - airflow.providers.google.cloud.operators.dataproc_metastore.DataprocMetastoreImportLink
+  - airflow.providers.google.cloud.operators.dataproc_metastore.DataprocMetastoreServiceLink
+  - airflow.providers.google.cloud.operators.dataproc_metastore.DataprocMetastoreStorageLink
 
 additional-extras:
   apache.beam: apache-beam[gcp]
