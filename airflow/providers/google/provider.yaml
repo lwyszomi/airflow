@@ -810,7 +810,7 @@ extra-links:
   - airflow.providers.google.cloud.operators.dataproc_metastore.DataprocMetastoreExportLink
   - airflow.providers.google.cloud.operators.dataproc_metastore.DataprocMetastoreImportLink
   - airflow.providers.google.cloud.operators.dataproc_metastore.DataprocMetastoreServiceLink
-  - airflow.providers.google.cloud.operators.dataproc_metastore.StorageLink
+  - airflow.providers.google.common.links.storage.StorageLink
 
 additional-extras:
   apache.beam: apache-beam[gcp]
