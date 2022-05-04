@@ -411,6 +411,8 @@ class TestBigQueryOperator:
             api_resource_configs=None,
             cluster_fields=None,
             encryption_configuration=encryption_configuration,
+            result_retry=DEFAULT_RETRY,
+            result_timeout=None,
         )
 
     @mock.patch('airflow.providers.google.cloud.operators.bigquery.BigQueryHook')
@@ -462,6 +464,8 @@ class TestBigQueryOperator:
                     api_resource_configs=None,
                     cluster_fields=None,
                     encryption_configuration=None,
+                    result_retry=DEFAULT_RETRY,
+                    result_timeout=None,
                 ),
                 mock.call(
                     sql='Select * from other_test_table',
@@ -481,6 +485,8 @@ class TestBigQueryOperator:
                     api_resource_configs=None,
                     cluster_fields=None,
                     encryption_configuration=None,
+                    result_retry=DEFAULT_RETRY,
+                    result_timeout=None,
                 ),
             ]
         )
@@ -542,6 +548,8 @@ class TestBigQueryOperator:
             api_resource_configs=None,
             cluster_fields=None,
             encryption_configuration=None,
+            result_retry=DEFAULT_RETRY,
+            result_timeout=None,
         )
         assert isinstance(operator.sql, str)
         ti.render_templates()

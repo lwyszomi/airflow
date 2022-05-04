@@ -1977,6 +1977,8 @@ class BigQueryHook(GoogleBaseHook, DbApiHook):
         cluster_fields: Optional[List[str]] = None,
         location: Optional[str] = None,
         encryption_configuration: Optional[Dict] = None,
+        result_retry: Retry = DEFAULT_RETRY,
+        result_timeout: Optional[float] = None,
     ) -> str:
         """
         Executes a BigQuery SQL query. Optionally persists results in a BigQuery
@@ -2037,6 +2039,8 @@ class BigQueryHook(GoogleBaseHook, DbApiHook):
                 encryption_configuration = {
                     "kmsKeyName": "projects/testp/locations/us/keyRings/test-kr/cryptoKeys/test-key"
                 }
+        :param result_retry: How to retry the `result` call that retrieves rows
+        :param result_timeout: The number of seconds to wait for `result` method before using `result_retry`
         """
         warnings.warn(
             "This method is deprecated. Please use `BigQueryHook.insert_job` method.", DeprecationWarning
@@ -2173,7 +2177,12 @@ class BigQueryHook(GoogleBaseHook, DbApiHook):
         if encryption_configuration:
             configuration["query"]["destinationEncryptionConfiguration"] = encryption_configuration
 
-        job = self.insert_job(configuration=configuration, project_id=self.project_id)
+        job = self.insert_job(
+            configuration=configuration,
+            project_id=self.project_id,
+            timeout=result_timeout,
+            retry=result_retry,
+        )
         self.running_job_id = job.job_id
         return job.job_id
 

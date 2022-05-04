@@ -530,6 +530,8 @@ class BigQueryExecuteQueryOperator(BaseOperator):
         If set as a sequence, the identities from the list must grant
         Service Account Token Creator IAM role to the directly preceding identity, with first
         account from the list granting this role to the originating account (templated).
+    :param result_retry: How to retry the `result` call that retrieves rows
+    :param result_timeout: The number of seconds to wait for `result` method before using `result_retry`
     """
 
     template_fields: Sequence[str] = (
@@ -575,6 +577,8 @@ class BigQueryExecuteQueryOperator(BaseOperator):
         location: Optional[str] = None,
         encryption_configuration: Optional[dict] = None,
         impersonation_chain: Optional[Union[str, Sequence[str]]] = None,
+        result_retry: Retry = DEFAULT_RETRY,
+        result_timeout: Optional[float] = None,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -607,6 +611,8 @@ class BigQueryExecuteQueryOperator(BaseOperator):
         self.encryption_configuration = encryption_configuration
         self.hook = None  # type: Optional[BigQueryHook]
         self.impersonation_chain = impersonation_chain
+        self.result_retry = result_retry
+        self.result_timeout = result_timeout
 
     def execute(self, context: 'Context'):
         if self.hook is None:
@@ -637,6 +643,8 @@ class BigQueryExecuteQueryOperator(BaseOperator):
                 api_resource_configs=self.api_resource_configs,
                 cluster_fields=self.cluster_fields,
                 encryption_configuration=self.encryption_configuration,
+                result_retry=self.result_retry,
+                result_timeout=self.result_timeout,
             )
         elif isinstance(self.sql, Iterable):
             job_id = [
@@ -658,6 +666,8 @@ class BigQueryExecuteQueryOperator(BaseOperator):
                     api_resource_configs=self.api_resource_configs,
                     cluster_fields=self.cluster_fields,
                     encryption_configuration=self.encryption_configuration,
+                    result_retry=self.result_retry,
+                    result_timeout=self.result_timeout,
                 )
                 for s in self.sql
             ]
