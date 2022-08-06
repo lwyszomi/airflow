@@ -22,7 +22,6 @@ Example Airflow DAG that:
 * updates existing template in Instance Group Manager
 
 """
-
 import os
 from datetime import datetime
 
@@ -84,18 +83,19 @@ INSTANCE_GROUP_MANAGER_NAME = 'instance-group-test'
 INSTANCE_GROUP_MANAGER_BODY = {
     "name": INSTANCE_GROUP_MANAGER_NAME,
     "base_instance_name": INSTANCE_GROUP_MANAGER_NAME,
-    "instance_template": f'global/instanceTemplates/{NEW_TEMPLATE_NAME}',
+    "instance_template": f'global/instanceTemplates/{TEMPLATE_NAME}',
     "target_size": 1,
 }
 
-SOURCE_TEMPLATE_URL = os.environ.get(
-    'SOURCE_TEMPLATE_URL',
-    f"https://www.googleapis.com/compute/beta/projects/{PROJECT_ID}/global/instanceTemplates/{TEMPLATE_NAME}",
+SOURCE_TEMPLATE_URL = (
+    f"https://www.googleapis.com/compute/beta/projects/{PROJECT_ID}/"
+    f"global/instanceTemplates/{TEMPLATE_NAME}"
 )
 
-DESTINATION_TEMPLATE_URL = os.environ.get(
-    'DESTINATION_TEMPLATE_URL',
-    f"https://www.googleapis.com/compute/beta/projects/{PROJECT_ID}/global/instanceTemplates/{TEMPLATE_NAME}",
+
+DESTINATION_TEMPLATE_URL = (
+    f"https://www.googleapis.com/compute/beta/projects/{PROJECT_ID}/"
+    f"global/instanceTemplates/{NEW_TEMPLATE_NAME}"
 )
 
 UPDATE_POLICY = {
@@ -109,7 +109,7 @@ UPDATE_POLICY = {
 
 with models.DAG(
     DAG_ID,
-    schedule_interval='@once',  # Override to match your needs
+    schedule_interval='@once',
     start_date=datetime(2021, 1, 1),
     catchup=False,
     tags=['example'],
@@ -191,6 +191,8 @@ with models.DAG(
     )
     # [END howto_operator_gce_igm_update_template_no_project_id]
 
+    bash_wait_operator1 = BashOperator(task_id="delay_bash_task_1", bash_command="sleep 3m")
+
     # [START howto_operator_gce_delete_old_template_no_project_id]
     gce_instance_template_old_delete = ComputeEngineDeleteInstanceTemplateOperator(
         task_id='gcp_compute_delete_old_template_task',
@@ -228,9 +230,10 @@ with models.DAG(
         bash_wait_operator,
         gce_instance_group_manager_update_template,
         gce_instance_group_manager_update_template2,
+        bash_wait_operator1,
+        gce_igm_delete,
         gce_instance_template_old_delete,
         gce_instance_template_new_delete,
-        gce_igm_delete,
         bash_wait_operator2,
     )
 

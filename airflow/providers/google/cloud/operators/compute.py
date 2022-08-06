@@ -68,8 +68,8 @@ class ComputeEngineBaseOperator(BaseOperator):
             raise AirflowException("The required parameter 'project_id' is missing")
         if not self.zone:
             raise AirflowException("The required parameter 'zone' is missing")
-        if not self.resource_id:
-            raise AirflowException("The required parameter 'resource_id' is missing")
+        # if not self.resource_id:
+        #     raise AirflowException("The required parameter 'resource_id' is missing")
 
     def execute(self, context: 'Context'):
         pass
@@ -168,39 +168,28 @@ class ComputeEngineInsertInstanceOperator(ComputeEngineBaseOperator):
         )
 
     def check_body_fields(self) -> None:
-        if 'machine_type' not in self.body:
+        required_params = ["machine_type", "disks", "network_interfaces"]
+        for param in required_params:
+            if param in self.body:
+                continue
+            readable_param = param.replace("_", " ")
             raise AirflowException(
-                f"The body '{self.body}' should contain at least machine type for the new operator "
-                f"in the 'machine_type' field. Check (google.cloud.compute_v1.types.Instance) "
+                f"The body '{self.body}' should contain at least {readable_param} for the new operator "
+                f"in the '{param}' field. Check (google.cloud.compute_v1.types.Instance) "
                 f"for more details about body fields description."
             )
-        if 'disks' not in self.body:
+
+    def _validate_inputs(self) -> None:
+        super()._validate_inputs()
+        if not self.resource_id and "name" not in self.body:
             raise AirflowException(
-                f"The body '{self.body}' should contain at least disks for the new operator "
-                f"in the 'disks' field. Check (google.cloud.compute_v1.types.Instance) "
-                f"for more details about body fields description."
-            )
-        if 'network_interfaces' not in self.body:
-            raise AirflowException(
-                f"The body '{self.body}' should contain at least network interfaces for the new operator "
-                f"in the 'network_interfaces' field. Check (google.cloud.compute_v1.types.Instance) "
-                f"for more details about body fields description. "
+                "The required parameters 'resource_id' and body['name'] are missing. "
+                "Please, provide at least one of them."
             )
 
     def _validate_all_body_fields(self) -> None:
         if self._field_validator:
             self._field_validator.validate(self.body)
-
-    def _validate_inputs(self) -> None:
-        if self.project_id == '':
-            raise AirflowException("The required parameter 'project_id' is missing")
-        if not self.zone:
-            raise AirflowException("The required parameter 'zone' is missing")
-        if not self.resource_id and "name" not in self.body:
-            raise AirflowException(
-                "The required parameters 'resource_id' and  body['name'] are missing. "
-                "Please, provide at least one of them."
-            )
 
     def execute(self, context: 'Context') -> dict:
         hook = ComputeEngineHook(
@@ -220,6 +209,11 @@ class ComputeEngineInsertInstanceOperator(ComputeEngineBaseOperator):
                 project_id=self.project_id,
                 zone=self.zone,
             )
+        except exceptions.NotFound as e:
+            # We actually expect to get 404 / Not Found here as the should not yet exist
+            if not e.code == 404:
+                raise e
+        else:
             self.log.info("The %s Instance already exists", self.resource_id)
             ComputeInstanceDetailsLink.persist(
                 context=context,
@@ -229,11 +223,6 @@ class ComputeEngineInsertInstanceOperator(ComputeEngineBaseOperator):
                 project_id=self.project_id or hook.project_id,
             )
             return Instance.to_dict(existing_instance)
-        except exceptions.NotFound as e:
-            # We actually expect to get 404 / Not Found here as the should not yet exist
-            if not e.code == 404:
-                raise e
-
         self._field_sanitizer.sanitize(self.body)
         self.log.info("Creating Instance with specified body: %s", self.body)
         hook.insert_instance(
@@ -362,13 +351,10 @@ class ComputeEngineInsertInstanceFromTemplateOperator(ComputeEngineBaseOperator)
             self._field_validator.validate(self.body)
 
     def _validate_inputs(self) -> None:
-        if self.project_id == '':
-            raise AirflowException("The required parameter 'project_id' is missing")
-        if not self.zone:
-            raise AirflowException("The required parameter 'zone' is missing")
+        super()._validate_inputs()
         if not self.resource_id and "name" not in self.body:
             raise AirflowException(
-                "The required parameters 'resource_id' and  body['name'] are missing. "
+                "The required parameters 'resource_id' and body['name'] are missing. "
                 "Please, provide at least one of them."
             )
 
@@ -389,6 +375,12 @@ class ComputeEngineInsertInstanceFromTemplateOperator(ComputeEngineBaseOperator)
                 project_id=self.project_id,
                 zone=self.zone,
             )
+        except exceptions.NotFound as e:
+            # We actually expect to get 404 / Not Found here as the template should
+            # not yet exist
+            if not e.code == 404:
+                raise e
+        else:
             self.log.info("The %s Instance already exists", self.resource_id)
             ComputeInstanceDetailsLink.persist(
                 context=context,
@@ -398,12 +390,6 @@ class ComputeEngineInsertInstanceFromTemplateOperator(ComputeEngineBaseOperator)
                 project_id=self.project_id or hook.project_id,
             )
             return Instance.to_dict(existing_instance)
-        except exceptions.NotFound as e:
-            # We actually expect to get 404 / Not Found here as the template should
-            # not yet exist
-            if not e.code == 404:
-                raise e
-
         self._field_sanitizer.sanitize(self.body)
         self.log.info("Creating Instance with specified body: %s", self.body)
         hook.insert_instance(
@@ -509,6 +495,11 @@ class ComputeEngineDeleteInstanceOperator(ComputeEngineBaseOperator):
             **kwargs,
         )
 
+    def _validate_inputs(self) -> None:
+        super()._validate_inputs()
+        if not self.resource_id:
+            raise AirflowException("The required parameter 'resource_id' is missing. ")
+
     def execute(self, context: 'Context') -> None:
         hook = ComputeEngineHook(
             gcp_conn_id=self.gcp_conn_id,
@@ -577,6 +568,11 @@ class ComputeEngineStartInstanceOperator(ComputeEngineBaseOperator):
     )
     # [END gce_instance_start_template_fields]
 
+    def _validate_inputs(self) -> None:
+        super()._validate_inputs()
+        if not self.resource_id:
+            raise AirflowException("The required parameter 'resource_id' is missing. ")
+
     def execute(self, context: 'Context') -> None:
         hook = ComputeEngineHook(
             gcp_conn_id=self.gcp_conn_id,
@@ -632,6 +628,11 @@ class ComputeEngineStopInstanceOperator(ComputeEngineBaseOperator):
         'impersonation_chain',
     )
     # [END gce_instance_stop_template_fields]
+
+    def _validate_inputs(self) -> None:
+        super()._validate_inputs()
+        if not self.resource_id:
+            raise AirflowException("The required parameter 'resource_id' is missing. ")
 
     def execute(self, context: 'Context') -> None:
         hook = ComputeEngineHook(
@@ -733,6 +734,11 @@ class ComputeEngineSetMachineTypeOperator(ComputeEngineBaseOperator):
         if self._field_validator:
             self._field_validator.validate(self.body)
 
+    def _validate_inputs(self) -> None:
+        super()._validate_inputs()
+        if not self.resource_id:
+            raise AirflowException("The required parameter 'resource_id' is missing. ")
+
     def execute(self, context: 'Context') -> None:
         hook = ComputeEngineHook(
             gcp_conn_id=self.gcp_conn_id,
@@ -747,7 +753,7 @@ class ComputeEngineSetMachineTypeOperator(ComputeEngineBaseOperator):
             resource_id=self.resource_id,
             project_id=self.project_id or hook.project_id,
         )
-        return hook.set_machine_type(
+        hook.set_machine_type(
             zone=self.zone, resource_id=self.resource_id, body=self.body, project_id=self.project_id
         )
 
@@ -893,23 +899,15 @@ class ComputeEngineInsertInstanceTemplateOperator(ComputeEngineBaseOperator):
         )
 
     def check_body_fields(self) -> None:
-        if 'machine_type' not in self.body["properties"]:
+        required_params = ["machine_type", "disks", "network_interfaces"]
+        for param in required_params:
+            if param in self.body["properties"]:
+                continue
+            readable_param = param.replace("_", " ")
             raise AirflowException(
-                f"The body '{self.body}' should contain at least machine type for the new operator "
-                f"in the 'machine_type' field. Check (google.cloud.compute_v1.types.InstanceTemplate) "
+                f"The body '{self.body}' should contain at least {readable_param} for the new operator "
+                f"in the '{param}' field. Check (google.cloud.compute_v1.types.Instance) "
                 f"for more details about body fields description."
-            )
-        if 'disks' not in self.body["properties"]:
-            raise AirflowException(
-                f"The body '{self.body}' should contain at least disks for the new operator "
-                f"in the 'disks' field. Check (google.cloud.compute_v1.types.InstanceTemplate) "
-                f"for more details about body fields description."
-            )
-        if 'network_interfaces' not in self.body["properties"]:
-            raise AirflowException(
-                f"The body '{self.body}' should contain at least network interfaces for the new operator "
-                f"in the 'network_interfaces' field. Check (google.cloud.compute_v1.types.InstanceTemplate) "
-                f"for more details about body fields description. "
             )
 
     def _validate_all_body_fields(self) -> None:
@@ -917,13 +915,10 @@ class ComputeEngineInsertInstanceTemplateOperator(ComputeEngineBaseOperator):
             self._field_validator.validate(self.body)
 
     def _validate_inputs(self) -> None:
-        if self.project_id == '':
-            raise AirflowException("The required parameter 'project_id' is missing")
-        if not self.zone:
-            raise AirflowException("The required parameter 'zone' is missing")
+        super()._validate_inputs()
         if not self.resource_id and "name" not in self.body:
             raise AirflowException(
-                "The required parameters 'resource_id' and  body['name'] are missing. "
+                "The required parameters 'resource_id' and body['name'] are missing. "
                 "Please, provide at least one of them."
             )
 
@@ -946,6 +941,12 @@ class ComputeEngineInsertInstanceTemplateOperator(ComputeEngineBaseOperator):
             existing_template = hook.get_instance_template(
                 resource_id=self.resource_id, project_id=self.project_id
             )
+        except exceptions.NotFound as e:
+            # We actually expect to get 404 / Not Found here as the template should
+            # not yet exist
+            if not e.code == 404:
+                raise e
+        else:
             self.log.info("The %s Template already exists.", existing_template)
             ComputeInstanceTemplateDetailsLink.persist(
                 context=context,
@@ -954,12 +955,6 @@ class ComputeEngineInsertInstanceTemplateOperator(ComputeEngineBaseOperator):
                 project_id=self.project_id or hook.project_id,
             )
             return InstanceTemplate.to_dict(existing_template)
-        except exceptions.NotFound as e:
-            # We actually expect to get 404 / Not Found here as the template should
-            # not yet exist
-            if not e.code == 404:
-                raise e
-
         self._field_sanitizer.sanitize(self.body)
         self.log.info("Creating Instance Template with specified body: %s", self.body)
         hook.insert_instance_template(
@@ -1056,6 +1051,11 @@ class ComputeEngineDeleteInstanceTemplateOperator(ComputeEngineBaseOperator):
             impersonation_chain=impersonation_chain,
             **kwargs,
         )
+
+    def _validate_inputs(self) -> None:
+        super()._validate_inputs()
+        if not self.resource_id:
+            raise AirflowException("The required parameter 'resource_id' is missing.")
 
     def execute(self, context: 'Context') -> None:
         hook = ComputeEngineHook(
@@ -1175,6 +1175,11 @@ class ComputeEngineCopyInstanceTemplateOperator(ComputeEngineBaseOperator):
         if self._field_validator:
             self._field_validator.validate(self.body_patch)
 
+    def _validate_inputs(self) -> None:
+        super()._validate_inputs()
+        if not self.resource_id:
+            raise AirflowException("The required parameter 'resource_id' is missing.")
+
     def execute(self, context: 'Context') -> dict:
         hook = ComputeEngineHook(
             gcp_conn_id=self.gcp_conn_id,
@@ -1194,6 +1199,12 @@ class ComputeEngineCopyInstanceTemplateOperator(ComputeEngineBaseOperator):
                 resource_id=self.body_patch['name'],
                 project_id=self.project_id,
             )
+        except exceptions.NotFound as e:
+            # We actually expect to get 404 / Not Found here as the template should
+            # not yet exist
+            if not e.code == 404:
+                raise e
+        else:
             self.log.info(
                 "The %s template already exists. It was likely created by previous run of the operator. "
                 "Assuming success.",
@@ -1206,12 +1217,6 @@ class ComputeEngineCopyInstanceTemplateOperator(ComputeEngineBaseOperator):
                 project_id=self.project_id or hook.project_id,
             )
             return InstanceTemplate.to_dict(existing_template)
-        except exceptions.NotFound as e:
-            # We actually expect to get 404 / Not Found here as the template should
-            # not yet exist
-            if not e.code == 404:
-                raise e
-
         old_body = InstanceTemplate.to_dict(
             hook.get_instance_template(
                 resource_id=self.resource_id,
@@ -1219,8 +1224,7 @@ class ComputeEngineCopyInstanceTemplateOperator(ComputeEngineBaseOperator):
             )
         )
         new_body = deepcopy(old_body)
-        new_body_new = {key: int(value) for (key, value) in new_body.items() if isinstance(value, int)}
-        self._field_sanitizer.sanitize(new_body_new)
+        self._field_sanitizer.sanitize(new_body)
         new_body = merge(new_body, self.body_patch)
         self.log.info("Calling insert instance template with updated body: %s", new_body)
         hook.insert_instance_template(body=new_body, request_id=self.request_id, project_id=self.project_id)
@@ -1323,6 +1327,11 @@ class ComputeEngineInstanceGroupUpdateManagerTemplateOperator(ComputeEngineBaseO
             impersonation_chain=impersonation_chain,
             **kwargs,
         )
+
+    def _validate_inputs(self) -> None:
+        super()._validate_inputs()
+        if not self.resource_id:
+            raise AirflowException("The required parameter 'resource_id' is missing. ")
 
     def _possibly_replace_template(self, dictionary: dict) -> None:
         if dictionary.get('instanceTemplate') == self.source_template:
@@ -1464,25 +1473,15 @@ class ComputeEngineInsertInstanceGroupManagerOperator(ComputeEngineBaseOperator)
         )
 
     def check_body_fields(self) -> None:
-        if 'base_instance_name' not in self.body:
+        required_params = ["base_instance_name", "target_size", "instance_template"]
+        for param in required_params:
+            if param in self.body:
+                continue
+            readable_param = param.replace("_", " ")
             raise AirflowException(
-                f"The body '{self.body}' should contain at least base instance name for the new operator "
-                f"in the 'base_instance_name' field. "
-                f"Check (google.cloud.compute_v1.types.InstanceGroupManager) "
+                f"The body '{self.body}' should contain at least {readable_param} for the new operator "
+                f"in the '{param}' field. Check (google.cloud.compute_v1.types.Instance) "
                 f"for more details about body fields description."
-            )
-        if 'target_size' not in self.body:
-            raise AirflowException(
-                f"The body '{self.body}' should contain at least target size for the new operator "
-                f"in the 'target_size' field. Check (google.cloud.compute_v1.types.InstanceGroupManager) "
-                f"for more details about body fields description."
-            )
-        if 'instance_template' not in self.body:
-            raise AirflowException(
-                f"The body '{self.body}' should contain at least instance template for the new operator "
-                f"in the 'instance_template' field. "
-                f"Check (google.cloud.compute_v1.types.InstanceGroupManager) "
-                f"for more details about body fields description. "
             )
 
     def _validate_all_body_fields(self) -> None:
@@ -1490,13 +1489,10 @@ class ComputeEngineInsertInstanceGroupManagerOperator(ComputeEngineBaseOperator)
             self._field_validator.validate(self.body)
 
     def _validate_inputs(self) -> None:
-        if self.project_id == '':
-            raise AirflowException("The required parameter 'project_id' is missing")
-        if not self.zone:
-            raise AirflowException("The required parameter 'zone' is missing")
+        super()._validate_inputs()
         if not self.resource_id and "name" not in self.body:
             raise AirflowException(
-                "The required parameters 'resource_id' and  body['name'] are missing. "
+                "The required parameters 'resource_id' and body['name'] are missing. "
                 "Please, provide at least one of them."
             )
 
@@ -1516,6 +1512,12 @@ class ComputeEngineInsertInstanceGroupManagerOperator(ComputeEngineBaseOperator)
                 project_id=self.project_id,
                 zone=self.zone,
             )
+        except exceptions.NotFound as e:
+            # We actually expect to get 404 / Not Found here as the Instance Group Manager should
+            # not yet exist
+            if not e.code == 404:
+                raise e
+        else:
             self.log.info("The %s Instance Group Manager already exists", existing_instance_group_manager)
             ComputeInstanceGroupManagerDetailsLink.persist(
                 context=context,
@@ -1525,12 +1527,6 @@ class ComputeEngineInsertInstanceGroupManagerOperator(ComputeEngineBaseOperator)
                 location_id=self.zone,
             )
             return InstanceGroupManager.to_dict(existing_instance_group_manager)
-        except exceptions.NotFound as e:
-            # We actually expect to get 404 / Not Found here as the Instance Group Manager should
-            # not yet exist
-            if not e.code == 404:
-                raise e
-
         self._field_sanitizer.sanitize(self.body)
         self.log.info("Creating Instance Group Manager with specified body: %s", self.body)
         hook.insert_instance_group_manager(
@@ -1633,6 +1629,11 @@ class ComputeEngineDeleteInstanceGroupManagerOperator(ComputeEngineBaseOperator)
             impersonation_chain=impersonation_chain,
             **kwargs,
         )
+
+    def _validate_inputs(self) -> None:
+        super()._validate_inputs()
+        if not self.resource_id:
+            raise AirflowException("The required parameter 'resource_id' is missing. ")
 
     def execute(self, context: 'Context'):
         hook = ComputeEngineHook(

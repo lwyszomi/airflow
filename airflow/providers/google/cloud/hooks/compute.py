@@ -97,7 +97,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> Any:
+    ) -> None:
         """
         Creates Instance Template using body specified.
         Must be called with keyword arguments rather than positional.
@@ -147,7 +147,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> Any:
+    ) -> None:
         """
         Deletes Instance Template.
         Deleting an Instance Template is permanent and cannot be undone. It
@@ -198,7 +198,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> dict:
+    ) -> object:
         """
         Retrieves Instance Template by project_id and resource_id.
         Must be called with keyword arguments rather than positional.
@@ -247,7 +247,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> Any:
+    ) -> None:
         """
         Creates Instance using body specified.
         Must be called with keyword arguments rather than positional.
@@ -321,7 +321,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> dict:
+    ) -> object:
         """
         Retrieves Instance by project_id and resource_id.
         Must be called with keyword arguments rather than positional.
@@ -373,7 +373,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> Any:
+    ) -> None:
         """
         Deletes Instance.
         Deleting an Instance is permanent and cannot be undone.
@@ -512,7 +512,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> Any:
+    ) -> None:
         """
         Creates an Instance Group Managers using the body specified.
         After the group is created, instances in the group are created using the specified Instance Template.
@@ -567,7 +567,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> dict:
+    ) -> object:
         """
         Retrieves Instance Group Manager by project_id, zone and resource_id.
         Must be called with keyword arguments rather than positional.
@@ -619,7 +619,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> Any:
+    ) -> None:
         """
         Deletes Instance Group Managers.
         Deleting an Instance Group Manager is permanent and cannot be undone.

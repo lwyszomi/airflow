@@ -30,6 +30,7 @@ from airflow.models.baseoperator import chain
 from airflow.operators.bash import BashOperator
 from airflow.providers.google.cloud.operators.compute import (
     ComputeEngineDeleteInstanceOperator,
+    ComputeEngineDeleteInstanceTemplateOperator,
     ComputeEngineInsertInstanceFromTemplateOperator,
     ComputeEngineInsertInstanceOperator,
     ComputeEngineInsertInstanceTemplateOperator,
@@ -98,7 +99,7 @@ GCE_INSTANCE_FROM_TEMPLATE_BODY = {
 
 with models.DAG(
     DAG_ID,
-    schedule_interval='@once',  # Override to match your needs
+    schedule_interval='@once',
     start_date=datetime(2021, 1, 1),
     catchup=False,
     tags=['example'],
@@ -169,7 +170,7 @@ with models.DAG(
     # Duplicate start for idempotence testing
     # [START howto_operator_gce_start_no_project_id]
     gce_instance_start2 = ComputeEngineStartInstanceOperator(
-        task_id='gcp_compute_start_task2',
+        task_id='gcp_compute_start_task_2',
         zone=LOCATION,
         resource_id=GCE_INSTANCE_NAME,
     )
@@ -188,7 +189,7 @@ with models.DAG(
     # Duplicate stop for idempotence testing
     # [START howto_operator_gce_stop_no_project_id]
     gce_instance_stop2 = ComputeEngineStopInstanceOperator(
-        task_id='gcp_compute_stop_task2',
+        task_id='gcp_compute_stop_task_2',
         zone=LOCATION,
         resource_id=GCE_INSTANCE_NAME,
     )
@@ -211,7 +212,7 @@ with models.DAG(
         zone=LOCATION,
         resource_id=GCE_INSTANCE_NAME,
         body={'machineType': f'zones/{LOCATION}/machineTypes/{SHORT_MACHINE_TYPE_NAME}'},
-        task_id='gcp_compute_set_machine_type2',
+        task_id='gcp_compute_set_machine_type_2',
     )
     # [END howto_operator_gce_set_machine_type_no_project_id]
 
@@ -232,6 +233,14 @@ with models.DAG(
     )
     # [END howto_operator_gce_delete_no_project_id]
     gce_instance_delete.trigger_rule = TriggerRule.ALL_DONE
+
+    # [START howto_operator_gce_delete_new_template_no_project_id]
+    gce_instance_template_delete = ComputeEngineDeleteInstanceTemplateOperator(
+        task_id='gcp_compute_delete_template_task',
+        resource_id=TEMPLATE_NAME,
+    )
+    # [END howto_operator_gce_delete_new_template_no_project_id]
+    gce_instance_template_delete.trigger_rule = TriggerRule.ALL_DONE
 
     bash_wait_operator = BashOperator(task_id="delay_bash_task", bash_command="sleep 3m")
 
@@ -256,6 +265,7 @@ with models.DAG(
         gce_set_machine_type,
         gce_set_machine_type2,
         gce_instance_delete2,
+        gce_instance_template_delete,
         bash_wait_operator3,
     )
 

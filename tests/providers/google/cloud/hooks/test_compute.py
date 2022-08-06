@@ -17,7 +17,7 @@
 # under the License.
 
 import unittest
-from unittest import TestCase, mock
+from unittest import mock
 from unittest.mock import PropertyMock
 
 import pytest
@@ -54,7 +54,7 @@ BASE_STRING = "airflow.providers.google.common.hooks.base_google.{}"
 COMPUTE_ENGINE_HOOK_PATH = "airflow.providers.google.cloud.hooks.compute.{}"
 
 
-class TestGcpComputeHookApiCall(TestCase):
+class TestGcpComputeHookApiCall(unittest.TestCase):
     def setUp(self):
         with mock.patch(
             BASE_STRING.format("GoogleBaseHook.__init__"),
