@@ -24,6 +24,7 @@ from google.api_core.retry import Retry
 from google.cloud.compute_v1.services.instance_group_managers import InstanceGroupManagersClient
 from google.cloud.compute_v1.services.instance_templates import InstanceTemplatesClient
 from google.cloud.compute_v1.services.instances import InstancesClient
+from google.cloud.compute_v1.types import Instance, InstanceGroupManager, InstanceTemplate
 from googleapiclient.discovery import build
 
 from airflow.exceptions import AirflowException
@@ -198,7 +199,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> object:
+    ) -> InstanceTemplate:
         """
         Retrieves Instance Template by project_id and resource_id.
         Must be called with keyword arguments rather than positional.
@@ -321,7 +322,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> object:
+    ) -> Instance:
         """
         Retrieves Instance by project_id and resource_id.
         Must be called with keyword arguments rather than positional.
@@ -567,7 +568,7 @@ class ComputeEngineHook(GoogleBaseHook):
         retry: Optional[Retry] = None,
         timeout: Optional[float] = None,
         metadata: Optional[Sequence[Tuple[str, str]]] = (),
-    ) -> object:
+    ) -> InstanceGroupManager:
         """
         Retrieves Instance Group Manager by project_id, zone and resource_id.
         Must be called with keyword arguments rather than positional.

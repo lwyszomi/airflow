@@ -68,8 +68,6 @@ class ComputeEngineBaseOperator(BaseOperator):
             raise AirflowException("The required parameter 'project_id' is missing")
         if not self.zone:
             raise AirflowException("The required parameter 'zone' is missing")
-        # if not self.resource_id:
-        #     raise AirflowException("The required parameter 'resource_id' is missing")
 
     def execute(self, context: 'Context'):
         pass
@@ -586,7 +584,7 @@ class ComputeEngineStartInstanceOperator(ComputeEngineBaseOperator):
             resource_id=self.resource_id,
             project_id=self.project_id or hook.project_id,
         )
-        return hook.start_instance(zone=self.zone, resource_id=self.resource_id, project_id=self.project_id)
+        hook.start_instance(zone=self.zone, resource_id=self.resource_id, project_id=self.project_id)
 
 
 class ComputeEngineStopInstanceOperator(ComputeEngineBaseOperator):
