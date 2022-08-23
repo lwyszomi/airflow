@@ -73,8 +73,8 @@ GCP_PROJECT_ID = 'project-id'
 TASK_ID = 'task-id'
 IMPERSONATION_CHAIN = ["ACCOUNT_1", "ACCOUNT_2", "ACCOUNT_3"]
 
-JOB_NAME = "job-name"
-OPERATION_NAME = "operation-name"
+JOB_NAME = "job-name/job-name"
+OPERATION_NAME = "transferOperations/transferJobs-123-456"
 AWS_BUCKET_NAME = "aws-bucket-name"
 GCS_BUCKET_NAME = "gcp-bucket-name"
 SOURCE_PATH = None
@@ -261,7 +261,7 @@ class TestGcpStorageTransferJobCreateOperator:
             task_id=TASK_ID,
             google_impersonation_chain=IMPERSONATION_CHAIN,
         )
-        result = op.execute(None)
+        result = op.execute(context=mock.MagicMock())
 
         mock_hook.assert_called_once_with(
             api_version='v1',
@@ -290,7 +290,7 @@ class TestGcpStorageTransferJobCreateOperator:
             google_impersonation_chain=IMPERSONATION_CHAIN,
         )
 
-        result = op.execute(None)
+        result = op.execute(context=mock.MagicMock())
 
         mock_hook.assert_called_once_with(
             api_version='v1',
@@ -314,11 +314,11 @@ class TestGcpStorageTransferJobCreateOperator:
         body = deepcopy(VALID_TRANSFER_JOB_AWS)
 
         op = CloudDataTransferServiceCreateJobOperator(body=body, task_id=TASK_ID)
-        result = op.execute(None)
+        result = op.execute(context=mock.MagicMock())
         assert result == VALID_TRANSFER_JOB_AWS_RAW
 
         op = CloudDataTransferServiceCreateJobOperator(body=body, task_id=TASK_ID)
-        result = op.execute(None)
+        result = op.execute(context=mock.MagicMock())
         assert result == VALID_TRANSFER_JOB_AWS_RAW
 
     # Setting all the operator's input parameters as templated dag_ids
@@ -357,7 +357,7 @@ class TestGcpStorageTransferJobUpdateOperator:
             task_id=TASK_ID,
             google_impersonation_chain=IMPERSONATION_CHAIN,
         )
-        result = op.execute(None)
+        result = op.execute(context=mock.MagicMock())
 
         mock_hook.assert_called_once_with(
             api_version='v1',
@@ -452,7 +452,8 @@ class TestGpcStorageTransferOperationsGetOperator:
             task_id=TASK_ID,
             google_impersonation_chain=IMPERSONATION_CHAIN,
         )
-        result = op.execute(None)
+
+        result = op.execute(context=mock.MagicMock())
         mock_hook.assert_called_once_with(
             api_version='v1',
             gcp_conn_id='google_cloud_default',
@@ -501,7 +502,7 @@ class TestGcpStorageTransferOperationListOperator:
             task_id=TASK_ID,
             google_impersonation_chain=IMPERSONATION_CHAIN,
         )
-        result = op.execute(None)
+        result = op.execute(context=mock.MagicMock())
         mock_hook.assert_called_once_with(
             api_version='v1',
             gcp_conn_id='google_cloud_default',
