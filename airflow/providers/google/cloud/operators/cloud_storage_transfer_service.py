@@ -255,12 +255,13 @@ class CloudDataTransferServiceCreateJobOperator(BaseOperator):
             impersonation_chain=self.google_impersonation_chain,
         )
         result = hook.create_transfer_job(body=self.body)
-        if NAME in result:
-            self.xcom_push(context, key="name", value=result[NAME])
+
+        project_id = self.project_id or hook.project_id
+        if project_id and NAME in result:
             CloudStorageTransferJobLink.persist(
                 context=context,
                 task_instance=self,
-                project_id=self.project_id or hook.project_id,
+                project_id=project_id,
                 job_name=result[NAME],
             )
 
@@ -344,12 +345,16 @@ class CloudDataTransferServiceUpdateJobOperator(BaseOperator):
             gcp_conn_id=self.gcp_conn_id,
             impersonation_chain=self.google_impersonation_chain,
         )
-        CloudStorageTransferJobLink.persist(
-            context=context,
-            task_instance=self,
-            project_id=self.project_id or hook.project_id,
-            job_name=self.job_name,
-        )
+
+        project_id = self.project_id or hook.project_id
+        if project_id:
+            CloudStorageTransferJobLink.persist(
+                context=context,
+                task_instance=self,
+                project_id=project_id,
+                job_name=self.job_name,
+            )
+
         return hook.update_transfer_job(job_name=self.job_name, body=self.body)
 
 
@@ -484,12 +489,15 @@ class CloudDataTransferServiceGetOperationOperator(BaseOperator):
         )
         operation = hook.get_transfer_operation(operation_name=self.operation_name)
 
-        CloudStorageTransferDetailsLink.persist(
-            context=context,
-            task_instance=self,
-            project_id=self.project_id or hook.project_id,
-            operation_name=self.operation_name,
-        )
+        project_id = self.project_id or hook.project_id
+        if project_id:
+            CloudStorageTransferDetailsLink.persist(
+                context=context,
+                task_instance=self,
+                project_id=project_id,
+                operation_name=self.operation_name,
+            )
+
         return operation
 
 
@@ -564,11 +572,14 @@ class CloudDataTransferServiceListOperationsOperator(BaseOperator):
         )
         operations_list = hook.list_transfer_operations(request_filter=self.filter)
         self.log.info(operations_list)
-        CloudStorageTransferListLink.persist(
-            context=context,
-            task_instance=self,
-            project_id=self.project_id or hook.project_id,
-        )
+
+        project_id = self.project_id or hook.project_id
+        if project_id:
+            CloudStorageTransferListLink.persist(
+                context=context,
+                task_instance=self,
+                project_id=project_id,
+            )
 
         return operations_list
 
