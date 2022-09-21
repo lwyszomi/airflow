@@ -1800,7 +1800,6 @@ class BigQueryHook(GoogleBaseHook, DbApiHook):
 
         if allow_jagged_rows:
             configuration['load']['allowJaggedRows'] = allow_jagged_rows
-
         job = self.insert_job(configuration=configuration, project_id=self.project_id)
         self.running_job_id = job.job_id
         return job.job_id
@@ -2180,7 +2179,6 @@ class BigQueryHook(GoogleBaseHook, DbApiHook):
 
         if encryption_configuration:
             configuration["query"]["destinationEncryptionConfiguration"] = encryption_configuration
-
         job = self.insert_job(configuration=configuration, project_id=self.project_id)
         self.running_job_id = job.job_id
         return job.job_id
@@ -2253,7 +2251,7 @@ class BigQueryHook(GoogleBaseHook, DbApiHook):
         if project_id is None:
             if var_name is not None:
                 self.log.info(
-                    'Project not included in %s: %s; using project "%s"',
+                    'Project is not included in %s: %s; using project "%s"',
                     var_name,
                     table_input,
                     default_project_id,
@@ -2919,7 +2917,7 @@ def split_tablename(
     if project_id is None:
         if var_name is not None:
             log.info(
-                'Project not included in %s: %s; using project "%s"',
+                'Project is not included in %s: %s; using project "%s"',
                 var_name,
                 table_input,
                 default_project_id,
