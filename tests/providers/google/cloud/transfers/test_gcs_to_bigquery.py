@@ -1259,7 +1259,7 @@ def test_execute_without_external_table_generate_job_id_async_should_execute_suc
         dag_id="adhoc_airflow",
         task_id=TASK_ID,
         logical_date=datetime(2022, 1, 1, 0, 0),
-        configuration=None,
+        configuration={},
         force_rerun=True,
     )
 
@@ -1372,7 +1372,7 @@ def test_schema_fields_without_external_table_async_should_execute_successfully(
         deferrable=True,
     )
 
-    with pytest.raises(TaskDeferred) as exc:
+    with pytest.raises(TaskDeferred):
         result = operator.execute(create_context(operator))
         assert result == '1'
 
@@ -1441,7 +1441,7 @@ def test_schema_fields_int_without_external_table_async_should_execute_successfu
         deferrable=True,
     )
 
-    with pytest.raises(TaskDeferred) as exc:
+    with pytest.raises(TaskDeferred):
         result = operator.execute(create_context(operator))
         assert result == '1'
 
