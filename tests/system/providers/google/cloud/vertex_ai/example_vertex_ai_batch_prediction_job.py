@@ -209,6 +209,11 @@ with models.DAG(
         bash_command="rm -r /batch-prediction/*",
     )
 
+    clear_folder = BashOperator(
+        task_id="clear_forecast_folder",
+        bash_command="rm -r /batch-prediction/*",
+    )
+
     (
         # TEST SETUP
         create_bucket

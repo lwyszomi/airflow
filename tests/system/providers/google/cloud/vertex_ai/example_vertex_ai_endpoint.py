@@ -225,6 +225,10 @@ with models.DAG(
         task_id="clear_folder",
         bash_command="rm -r /endpoint/*",
     )
+    clear_folder = BashOperator(
+        task_id="clear_folder",
+        bash_command="rm -r /endpoint/*",
+    )
 
     (
         # TEST SETUP
