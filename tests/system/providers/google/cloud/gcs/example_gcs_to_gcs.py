@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
+from pathlib import Path
 
 from airflow import models
 from airflow.models.baseoperator import chain
@@ -43,7 +44,13 @@ DAG_ID = "gcs_to_gcs"
 
 BUCKET_NAME_SRC = f"bucket_{DAG_ID}_{ENV_ID}"
 BUCKET_NAME_DST = f"bucket_dst_{DAG_ID}_{ENV_ID}"
-RANDOM_FILE_NAME = OBJECT_1 = OBJECT_2 = "random.bin"
+
+FILE_NAME = OBJECT_1 = OBJECT_2 = "random.bin"
+
+CURRENT_FOLDER = Path(__file__).parent
+LOCAL_PATH = str(Path(CURRENT_FOLDER) / "resources")
+
+FILE_LOCAL_PATH = str(Path(LOCAL_PATH))
 
 
 with models.DAG(
@@ -53,9 +60,11 @@ with models.DAG(
     catchup=False,
     tags=["gcs", "example"],
 ) as dag:
+
     generate_random_file = BashOperator(
         task_id="generate_random_file",
-        bash_command=f"cat /dev/urandom | head -c $((1 * 1024 * 1024)) > {RANDOM_FILE_NAME}",
+        bash_command=f"mkdir -p {FILE_LOCAL_PATH} && "
+        f"cat /dev/urandom | head -c $((1 * 1024 * 1024)) > {FILE_LOCAL_PATH}/{FILE_NAME}",
     )
 
     create_bucket_src = GCSCreateBucketOperator(
@@ -72,29 +81,29 @@ with models.DAG(
 
     upload_file_src = LocalFilesystemToGCSOperator(
         task_id="upload_file_src",
-        src=RANDOM_FILE_NAME,
-        dst=RANDOM_FILE_NAME,
+        src=f"{FILE_LOCAL_PATH}/{FILE_NAME}",
+        dst=FILE_NAME,
         bucket=BUCKET_NAME_SRC,
     )
 
     upload_file_src_sub = LocalFilesystemToGCSOperator(
         task_id="upload_file_src_sub",
-        src=RANDOM_FILE_NAME,
-        dst=f"subdir/{RANDOM_FILE_NAME}",
+        src=f"{FILE_LOCAL_PATH}/{FILE_NAME}",
+        dst=f"subdir/{FILE_NAME}",
         bucket=BUCKET_NAME_SRC,
     )
 
     upload_file_dst = LocalFilesystemToGCSOperator(
         task_id="upload_file_dst",
-        src=RANDOM_FILE_NAME,
-        dst=RANDOM_FILE_NAME,
+        src=f"{FILE_LOCAL_PATH}/{FILE_NAME}",
+        dst=FILE_NAME,
         bucket=BUCKET_NAME_DST,
     )
 
     upload_file_dst_sub = LocalFilesystemToGCSOperator(
         task_id="upload_file_dst_sub",
-        src=RANDOM_FILE_NAME,
-        dst=f"subdir/{RANDOM_FILE_NAME}",
+        src=f"{FILE_LOCAL_PATH}/{FILE_NAME}",
+        dst=f"subdir/{FILE_NAME}",
         bucket=BUCKET_NAME_DST,
     )
 
@@ -213,6 +222,7 @@ with models.DAG(
 
     chain(
         # TEST SETUP
+        generate_random_file,
         [create_bucket_src, create_bucket_dst],
         [upload_file_src, upload_file_src_sub],
         [upload_file_dst, upload_file_dst_sub],
