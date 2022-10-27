@@ -69,6 +69,7 @@ dependencies:
   - gcloud-aio-bigquery>=6.1.2
   - gcloud-aio-storage
   - google-ads>=15.1.1
+  - gcloud-rest-auth>=3.0.0
   - google-api-core>=2.7.0,<3.0.0
   - google-api-python-client>=1.6.0,<2.0.0
   - google-auth>=1.0.0
