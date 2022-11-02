@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from airflow.models import BaseOperator
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.providers.google.common.links.storage import StorageLink
 
 if TYPE_CHECKING:
     from airflow.utils.context import Context
@@ -64,6 +65,7 @@ class LocalFilesystemToGCSOperator(BaseOperator):
         "bucket",
         "impersonation_chain",
     )
+    operator_extra_links = (StorageLink(),)
 
     def __init__(
         self,
@@ -119,3 +121,9 @@ class LocalFilesystemToGCSOperator(BaseOperator):
                 filename=filepath,
                 gzip=self.gzip,
             )
+        StorageLink.persist(
+            context=context,
+            task_instance=self,
+            uri=self.bucket,
+            project_id=hook.project_id,
+        )
