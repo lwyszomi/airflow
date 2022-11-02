@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Sequence
 from airflow.models import BaseOperator
 from airflow.providers.google.ads.hooks.ads import GoogleAdsHook
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.providers.google.common.links.storage import StorageLink
 
 if TYPE_CHECKING:
     from airflow.utils.context import Context
@@ -71,6 +72,7 @@ class GoogleAdsToGcsOperator(BaseOperator):
         "obj",
         "impersonation_chain",
     )
+    operator_extra_links = (StorageLink(),)
 
     def __init__(
         self,
@@ -129,3 +131,9 @@ class GoogleAdsToGcsOperator(BaseOperator):
                 gzip=self.gzip,
             )
             self.log.info("%s uploaded to GCS", self.obj)
+        StorageLink.persist(
+            context=context,
+            task_instance=self,
+            uri=self.bucket,
+            project_id=hook.project_id,
+        )
