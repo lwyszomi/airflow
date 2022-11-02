@@ -112,8 +112,9 @@ class CloudTranslateSpeechOperator(BaseOperator):
         "gcp_conn_id",
         "impersonation_chain",
     )
-    operator_extra_links = (FileDetailsLink(),)
     # [END translate_speech_template_fields]
+
+    operator_extra_links = (FileDetailsLink(),)
 
     def __init__(
         self,
