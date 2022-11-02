@@ -23,6 +23,7 @@ from typing import TYPE_CHECKING, Sequence
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.providers.google.common.links.storage import StorageLink
 
 WILDCARD = "*"
 
@@ -174,6 +175,7 @@ class GCSToGCSOperator(BaseOperator):
         "impersonation_chain",
     )
     ui_color = "#f0eee4"
+    operator_extra_links = (StorageLink(),)
 
     def __init__(
         self,
@@ -261,6 +263,12 @@ class GCSToGCSOperator(BaseOperator):
             # Now search with prefix using provided delimiter if any
             else:
                 self._copy_source_without_wildcard(hook=hook, prefix=prefix)
+        StorageLink.persist(
+            context=context,
+            task_instance=self,
+            uri=self.destination_bucket,
+            project_id=hook.project_id,
+        )
 
     def _ignore_existing_files(self, hook, prefix, **kwargs):
         # list all files in the Destination GCS bucket
