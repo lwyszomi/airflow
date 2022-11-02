@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Sequence
 
 from airflow.models import BaseOperator
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.providers.google.common.links.storage import StorageLink
 from airflow.providers.google.suite.hooks.drive import GoogleDriveHook
 
 if TYPE_CHECKING:
@@ -63,6 +64,7 @@ class GoogleDriveToGCSOperator(BaseOperator):
         "drive_id",
         "impersonation_chain",
     )
+    operator_extra_links = (StorageLink(),)
 
     def __init__(
         self,
@@ -105,3 +107,9 @@ class GoogleDriveToGCSOperator(BaseOperator):
             bucket_name=self.bucket_name, object_name=self.object_name
         ) as file:
             gdrive_hook.download_file(file_id=file_metadata["id"], file_handle=file)
+        StorageLink.persist(
+            context=context,
+            task_instance=self,
+            uri=self.bucket_name,
+            project_id=gcs_hook.project_id,
+        )
