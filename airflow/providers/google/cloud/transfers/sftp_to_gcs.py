@@ -25,6 +25,7 @@ from typing import TYPE_CHECKING, Sequence
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.providers.google.common.links.storage import StorageLink
 from airflow.providers.sftp.hooks.sftp import SFTPHook
 
 if TYPE_CHECKING:
@@ -80,6 +81,7 @@ class SFTPToGCSOperator(BaseOperator):
         "destination_bucket",
         "impersonation_chain",
     )
+    operator_extra_links = (StorageLink(),)
 
     def __init__(
         self,
@@ -140,6 +142,12 @@ class SFTPToGCSOperator(BaseOperator):
                 self.destination_path if self.destination_path else self.source_path.rsplit("/", 1)[1]
             )
             self._copy_single_object(gcs_hook, sftp_hook, self.source_path, destination_object)
+        StorageLink.persist(
+            context=context,
+            task_instance=self,
+            uri=self.destination_bucket,
+            project_id=gcs_hook.project_id,
+        )
 
     def _copy_single_object(
         self,
