@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any, Sequence
 
 from airflow.models import BaseOperator
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.providers.google.common.links.storage import StorageLink
 from airflow.providers.google.suite.hooks.sheets import GSheetsHook
 
 if TYPE_CHECKING:
@@ -64,6 +65,7 @@ class GoogleSheetsToGCSOperator(BaseOperator):
         "sheet_filter",
         "impersonation_chain",
     )
+    operator_extra_links = (StorageLink(),)
 
     def __init__(
         self,
@@ -137,4 +139,10 @@ class GoogleSheetsToGCSOperator(BaseOperator):
             destination_array.append(gcs_path_to_file)
 
         self.xcom_push(context, "destination_objects", destination_array)
+        StorageLink.persist(
+            context=context,
+            task_instance=self,
+            uri=self.destination_bucket,
+            project_id=gcs_hook.project_id,
+        )
         return destination_array
