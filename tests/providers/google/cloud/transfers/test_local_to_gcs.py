@@ -72,7 +72,7 @@ class TestFileToGcsOperator(unittest.TestCase):
             dst="test/test1.csv",
             **self._config,
         )
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_instance.upload.assert_called_once_with(
             bucket_name=self._config["bucket"],
             filename=self.testfile1,
@@ -98,7 +98,7 @@ class TestFileToGcsOperator(unittest.TestCase):
         operator = LocalFilesystemToGCSOperator(
             task_id="gcs_to_file_sensor", dag=self.dag, src=self.testfiles, dst="test/", **self._config
         )
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         files_objects = zip(
             self.testfiles, ["test/" + os.path.basename(testfile) for testfile in self.testfiles]
         )
@@ -120,7 +120,7 @@ class TestFileToGcsOperator(unittest.TestCase):
         operator = LocalFilesystemToGCSOperator(
             task_id="gcs_to_file_sensor", dag=self.dag, src="/tmp/fake*.csv", dst="test/", **self._config
         )
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         object_names = ["test/" + os.path.basename(fp) for fp in glob("/tmp/fake*.csv")]
         files_objects = zip(glob("/tmp/fake*.csv"), object_names)
         calls = [
