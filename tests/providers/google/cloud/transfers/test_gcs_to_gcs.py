@@ -73,7 +73,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             destination_bucket=DESTINATION_BUCKET,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.list.assert_called_once_with(TEST_BUCKET, prefix="", delimiter="test_object")
 
     @mock.patch("airflow.providers.google.cloud.transfers.gcs_to_gcs.GCSHook")
@@ -85,7 +85,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             destination_bucket=DESTINATION_BUCKET,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.list.assert_called_once_with(TEST_BUCKET, prefix="test_object", delimiter="")
 
     @mock.patch("airflow.providers.google.cloud.transfers.gcs_to_gcs.GCSHook")
@@ -98,7 +98,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             replace=False,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls = [
             mock.call(TEST_BUCKET, prefix="test_object", delimiter=""),
             mock.call(DESTINATION_BUCKET, prefix="test_object", delimiter=""),
@@ -115,7 +115,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             replace=False,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls = [
             mock.call(TEST_BUCKET, prefix="test_object.txt", delimiter=None),
             mock.call(DESTINATION_BUCKET, prefix="test_object.txt", delimiter=None),
@@ -138,7 +138,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             exact_match=True,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls = [
             mock.call(TEST_BUCKET, prefix="test_object.txt", delimiter=None),
         ]
@@ -153,7 +153,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             destination_bucket=DESTINATION_BUCKET,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.list.assert_called_once_with(TEST_BUCKET, prefix="test", delimiter="object")
 
     # copy with wildcard
@@ -168,7 +168,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             destination_object=DESTINATION_OBJECT_PREFIX,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls = [
             mock.call(TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "foo/bar/file1.txt"),
             mock.call(TEST_BUCKET, "test_object/file2.txt", DESTINATION_BUCKET, "foo/bar/file2.txt"),
@@ -186,7 +186,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             destination_object=f"{DESTINATION_OBJECT_PREFIX}/{SOURCE_OBJECT_WILDCARD_SUFFIX[:-1]}",
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls_retained = [
             mock.call(
                 TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "foo/bar/test_object/file1.txt"
@@ -207,7 +207,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             destination_bucket=DESTINATION_BUCKET,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls_none = [
             mock.call(TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "test_object/file1.txt"),
             mock.call(TEST_BUCKET, "test_object/file2.txt", DESTINATION_BUCKET, "test_object/file2.txt"),
@@ -225,7 +225,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             destination_object="",
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls_empty = [
             mock.call(TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "/file1.txt"),
             mock.call(TEST_BUCKET, "test_object/file2.txt", DESTINATION_BUCKET, "/file2.txt"),
@@ -243,7 +243,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             last_modified_time=None,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls_none = [
             mock.call(TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "test_object/file1.txt"),
             mock.call(TEST_BUCKET, "test_object/file2.txt", DESTINATION_BUCKET, "test_object/file2.txt"),
@@ -262,7 +262,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             last_modified_time=MOD_TIME_1,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls_none = [
             mock.call(TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "test_object/file1.txt"),
             mock.call(TEST_BUCKET, "test_object/file2.txt", DESTINATION_BUCKET, "test_object/file2.txt"),
@@ -281,7 +281,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             last_modified_time=MOD_TIME_1,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.rewrite.assert_called_once_with(
             TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "test_object/file1.txt"
         )
@@ -297,7 +297,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             last_modified_time=None,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls_none = [
             mock.call(TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "test_object/file1.txt"),
             mock.call(TEST_BUCKET, "test_object/file2.txt", DESTINATION_BUCKET, "test_object/file2.txt"),
@@ -316,7 +316,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             last_modified_time=MOD_TIME_1,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.rewrite.assert_called_once_with(
             TEST_BUCKET, "test_object.txt", DESTINATION_BUCKET, "test_object.txt"
         )
@@ -333,7 +333,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             maximum_modified_time=MOD_TIME_1,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.rewrite.assert_called_once_with(
             TEST_BUCKET, "test_object.txt", DESTINATION_BUCKET, "test_object.txt"
         )
@@ -351,7 +351,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             maximum_modified_time=MOD_TIME_2,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.rewrite.assert_called_once_with(
             TEST_BUCKET, "test_object.txt", DESTINATION_BUCKET, "test_object.txt"
         )
@@ -367,7 +367,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             last_modified_time=None,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.rewrite.assert_called_once_with(
             TEST_BUCKET, "test_object.txt", DESTINATION_BUCKET, "test_object.txt"
         )
@@ -384,7 +384,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             last_modified_time=MOD_TIME_1,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.rewrite.assert_not_called()
 
     @mock.patch("airflow.providers.google.cloud.transfers.gcs_to_gcs.GCSHook")
@@ -401,7 +401,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             is_older_than=3600,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.rewrite.assert_called_once_with(
             TEST_BUCKET, "test_object.txt", DESTINATION_BUCKET, "test_object.txt"
         )
@@ -436,7 +436,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
         )
 
         with mock.patch.object(operator.log, "warning") as mock_warn:
-            operator.execute(None)
+            operator.execute(context=mock.MagicMock())
             mock_warn.assert_called_once_with(
                 "destination_bucket is None. Defaulting it to source_bucket (%s)", TEST_BUCKET
             )
@@ -449,7 +449,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             task_id=TASK_ID, source_bucket=TEST_BUCKET, source_objects=SOURCE_OBJECTS_NO_FILE
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.list.assert_called_once_with(TEST_BUCKET, prefix="", delimiter=None)
 
     @mock.patch("airflow.providers.google.cloud.transfers.gcs_to_gcs.GCSHook")
@@ -467,7 +467,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
         operator = GCSToGCSOperator(
             task_id=TASK_ID, source_bucket=TEST_BUCKET, source_objects=SOURCE_OBJECTS_SINGLE_FILE
         )
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.list.assert_called_once_with(
             TEST_BUCKET, prefix=SOURCE_OBJECTS_SINGLE_FILE[0], delimiter=None
         )
@@ -477,7 +477,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
         operator = GCSToGCSOperator(
             task_id=TASK_ID, source_bucket=TEST_BUCKET, source_objects=SOURCE_OBJECTS_MULTIPLE_FILES
         )
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.list.assert_has_calls(
             [
                 mock.call(TEST_BUCKET, prefix="test_object/file1.txt", delimiter=None),
@@ -494,7 +494,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             source_objects=SOURCE_OBJECTS_NO_FILE,
             delimiter=DELIMITER,
         )
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_hook.return_value.list.assert_called_once_with(TEST_BUCKET, prefix="", delimiter=DELIMITER)
 
     # COPY
@@ -510,7 +510,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             delimiter=DELIMITER,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls = [
             mock.call(TEST_BUCKET, "test_object/file3.json", DESTINATION_BUCKET, DESTINATION_OBJECT),
         ]
@@ -528,7 +528,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             delimiter=".txt",
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls = [
             mock.call(TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "test_object/file1.txt"),
             mock.call(TEST_BUCKET, "test_object/file2.txt", DESTINATION_BUCKET, "test_object/file2.txt"),
@@ -541,7 +541,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
         operator = GCSToGCSOperator(
             task_id=TASK_ID, source_bucket=TEST_BUCKET, source_objects=SOURCE_OBJECTS_LIST
         )
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls = [
             mock.call(TEST_BUCKET, "test_object/file1.txt", TEST_BUCKET, "test_object/file1.txt"),
             mock.call(TEST_BUCKET, "test_object/file2.txt", TEST_BUCKET, "test_object/file2.txt"),
@@ -561,7 +561,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             last_modified_time=MOD_TIME_1,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls_none = [
             mock.call(TEST_BUCKET, "test_object/file1.txt", DESTINATION_BUCKET, "test_object/file1.txt"),
             mock.call(TEST_BUCKET, "test_object/file2.txt", DESTINATION_BUCKET, "test_object/file2.txt"),
@@ -580,7 +580,7 @@ class TestGoogleCloudStorageToCloudStorageOperator(unittest.TestCase):
             replace=False,
         )
 
-        operator.execute(None)
+        operator.execute(context=mock.MagicMock())
         mock_calls = [
             mock.call(TEST_BUCKET, prefix="test_object", delimiter=""),
             mock.call(DESTINATION_BUCKET, prefix="foo/bar", delimiter=""),
