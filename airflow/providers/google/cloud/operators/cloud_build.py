@@ -324,7 +324,6 @@ class CloudBuildDeleteBuildTriggerOperator(BaseOperator):
     """
 
     template_fields: Sequence[str] = ("project_id", "trigger_id", "gcp_conn_id")
-    operator_extra_links = (CloudBuildTriggersListLink(),)
 
     def __init__(
         self,
@@ -356,13 +355,6 @@ class CloudBuildDeleteBuildTriggerOperator(BaseOperator):
             timeout=self.timeout,
             metadata=self.metadata,
         )
-        project_id = self.project_id or hook.project_id
-        if project_id:
-            CloudBuildTriggersListLink.persist(
-                context=context,
-                task_instance=self,
-                project_id=project_id,
-            )
 
 
 class CloudBuildGetBuildOperator(BaseOperator):
