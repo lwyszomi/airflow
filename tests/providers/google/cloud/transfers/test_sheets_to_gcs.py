@@ -97,6 +97,7 @@ class TestGoogleSheetsToGCSOperator:
             gcp_conn_id=GCP_CONN_ID,
             impersonation_chain=IMPERSONATION_CHAIN,
         )
+        context = mock.MagicMock()
         op.execute(context)
 
         mock_sheet_hook.assert_called_once_with(
