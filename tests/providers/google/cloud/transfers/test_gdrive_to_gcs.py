@@ -34,7 +34,6 @@ class TestGoogleDriveToGCSOperator:
     @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GCSHook")
     @mock.patch("airflow.providers.google.cloud.transfers.gdrive_to_gcs.GoogleDriveHook")
     def test_execute(self, mock_gdrive_hook, mock_gcs_hook):
-        context = {}
         op = GoogleDriveToGCSOperator(
             task_id="test_task",
             folder_id=FOLDER_ID,
@@ -48,7 +47,7 @@ class TestGoogleDriveToGCSOperator:
         meta = {"id": "123xyz"}
         mock_gdrive_hook.return_value.get_file_id.return_value = meta
 
-        op.execute(context)
+        op.execute(context=mock.MagicMock())
         mock_gdrive_hook.return_value.get_file_id.assert_called_once_with(
             folder_id=FOLDER_ID, file_name=FILE_NAME, drive_id=DRIVE_ID
         )
