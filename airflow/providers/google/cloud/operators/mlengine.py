@@ -31,7 +31,6 @@ from airflow.providers.google.cloud.links.mlengine import (
     MLEngineJobDetailsLink,
     MLEngineJobSListLink,
     MLEngineModelLink,
-    MLEngineModelsListLink,
     MLEngineModelVersionDetailsLink,
 )
 
@@ -545,7 +544,6 @@ class MLEngineDeleteModelOperator(BaseOperator):
         "_model_name",
         "_impersonation_chain",
     )
-    operator_extra_links = (MLEngineModelsListLink(),)
 
     def __init__(
         self,
@@ -572,14 +570,6 @@ class MLEngineDeleteModelOperator(BaseOperator):
             delegate_to=self._delegate_to,
             impersonation_chain=self._impersonation_chain,
         )
-
-        project_id = self._project_id or hook.project_id
-        if project_id:
-            MLEngineModelsListLink.persist(
-                context=context,
-                task_instance=self,
-                project_id=project_id,
-            )
 
         return hook.delete_model(
             project_id=self._project_id, model_name=self._model_name, delete_contents=self._delete_contents
@@ -1003,7 +993,6 @@ class MLEngineDeleteVersionOperator(BaseOperator):
         "_version_name",
         "_impersonation_chain",
     )
-    operator_extra_links = (MLEngineModelLink(),)
 
     def __init__(
         self,
@@ -1039,15 +1028,6 @@ class MLEngineDeleteVersionOperator(BaseOperator):
             delegate_to=self._delegate_to,
             impersonation_chain=self._impersonation_chain,
         )
-
-        project_id = self._project_id or hook.project_id
-        if project_id:
-            MLEngineModelLink.persist(
-                context=context,
-                task_instance=self,
-                project_id=project_id,
-                model_id=self._model_name,
-            )
 
         return hook.delete_version(
             project_id=self._project_id, model_name=self._model_name, version_name=self._version_name
