@@ -68,7 +68,7 @@ class TestSFTPToGCSOperator(unittest.TestCase):
             delegate_to=DELEGATE_TO,
             impersonation_chain=IMPERSONATION_CHAIN,
         )
-        task.execute(None)
+        task.execute(context=mock.MagicMock())
         gcs_hook.assert_called_once_with(
             gcp_conn_id=GCP_CONN_ID,
             delegate_to=DELEGATE_TO,
@@ -105,7 +105,7 @@ class TestSFTPToGCSOperator(unittest.TestCase):
             impersonation_chain=IMPERSONATION_CHAIN,
             gzip=True,
         )
-        task.execute(None)
+        task.execute(context=mock.MagicMock())
         gcs_hook.assert_called_once_with(
             gcp_conn_id=GCP_CONN_ID,
             delegate_to=DELEGATE_TO,
@@ -141,7 +141,7 @@ class TestSFTPToGCSOperator(unittest.TestCase):
             delegate_to=DELEGATE_TO,
             impersonation_chain=IMPERSONATION_CHAIN,
         )
-        task.execute(None)
+        task.execute(context=mock.MagicMock())
         gcs_hook.assert_called_once_with(
             gcp_conn_id=GCP_CONN_ID,
             delegate_to=DELEGATE_TO,
@@ -182,7 +182,7 @@ class TestSFTPToGCSOperator(unittest.TestCase):
             sftp_conn_id=SFTP_CONN_ID,
             delegate_to=DELEGATE_TO,
         )
-        task.execute(None)
+        task.execute(context=mock.MagicMock())
 
         sftp_hook.return_value.get_tree_map.assert_called_with(
             "main_dir", prefix="main_dir/test_object", delimiter=".json"
@@ -234,7 +234,7 @@ class TestSFTPToGCSOperator(unittest.TestCase):
             sftp_conn_id=SFTP_CONN_ID,
             delegate_to=DELEGATE_TO,
         )
-        task.execute(None)
+        task.execute(context=mock.MagicMock())
 
         sftp_hook.return_value.delete_file.assert_has_calls(
             [
