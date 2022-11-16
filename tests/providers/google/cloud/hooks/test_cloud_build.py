@@ -24,15 +24,19 @@ from __future__ import annotations
 import unittest
 from unittest.mock import MagicMock, patch
 
+import pytest
 from google.api_core.gapic_v1.method import DEFAULT
+from google.cloud.devtools.cloudbuild_v1.types import Build
 
-from airflow.providers.google.cloud.hooks.cloud_build import CloudBuildHook
+from airflow import AirflowException
+from airflow.providers.google.cloud.hooks.cloud_build import CloudBuildAsyncHook, CloudBuildHook
 from airflow.providers.google.common.consts import CLIENT_INFO
 from tests.providers.google.cloud.utils.base_gcp_mock import mock_base_gcp_hook_no_default_project_id
 
 PROJECT_ID = "cloud-build-project"
 LOCATION = "test-location"
 PARENT = f"projects/{PROJECT_ID}/locations/{LOCATION}"
+CLOUD_BUILD_PATH = "airflow.providers.google.cloud.hooks.cloud_build.{}"
 BUILD_ID = "test-build-id-9832662"
 REPO_SOURCE = {"repo_source": {"repo_name": "test_repo", "branch_name": "main"}}
 BUILD = {
@@ -52,6 +56,8 @@ BUILD_TRIGGER = {
 }
 OPERATION = {"metadata": {"build": {"id": BUILD_ID}}}
 TRIGGER_ID = "32488e7f-09d6-4fe9-a5fb-4ca1419a6e7a"
+
+pytest.hook = CloudBuildAsyncHook(gcp_conn_id="google_cloud_default")
 
 
 class TestCloudBuildHook(unittest.TestCase):
@@ -298,3 +304,34 @@ class TestCloudBuildHook(unittest.TestCase):
             timeout=None,
             metadata=(),
         )
+
+
+@pytest.mark.asyncio
+@patch(CLOUD_BUILD_PATH.format("CloudBuildAsyncClient"))
+def test_cloud_build_service_client_creation_should_execute_successfully(mocked_client):
+    async_client = pytest.hook.get_cloud_build_client()
+
+    mocked_client.assert_called_once_with(credentials=pytest.hook.get_credentials(), client_info=CLIENT_INFO)
+    assert mocked_client.return_value == async_client
+
+
+@pytest.mark.asyncio
+async def test_async_get_clod_build_without_build_id_should_throw_exception():
+    with pytest.raises(AirflowException, match=r"Google Cloud Build id is required."):
+        await pytest.hook.get_cloud_build(project_id=PROJECT_ID, id_=None)
+
+
+@pytest.mark.asyncio
+@patch(CLOUD_BUILD_PATH.format("CloudBuildAsyncClient.get_build"))
+async def test_async_get_cloud_build_should_execute_successfully(mocked_get_call):
+    mocked_get_call.return_value = Build()
+    cloud_build = await pytest.hook.get_cloud_build(id_=BUILD_ID)
+    assert type(cloud_build) == Build
+
+
+@pytest.mark.asyncio
+@patch(CLOUD_BUILD_PATH.format("CloudBuildAsyncClient.get_build"))
+async def test_async_get_cloud_build_incorrect_instance_type_should_execute_successfully(mocked_get_call):
+    mocked_get_call.return_value = "incorrect"
+    with pytest.raises(AirflowException, match=r"Incorrect Cloud Build instance received"):
+        await pytest.hook.get_cloud_build(id_=BUILD_ID)
