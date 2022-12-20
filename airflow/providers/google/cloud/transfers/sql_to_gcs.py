@@ -29,6 +29,7 @@ import unicodecsv as csv
 
 from airflow.models import BaseOperator
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
+from airflow.providers.google.cloud.triggers.gcs import GCSUploadObjectsTrigger
 
 if TYPE_CHECKING:
     from airflow.utils.context import Context
@@ -77,6 +78,7 @@ class BaseSQLToGCSOperator(BaseOperator):
         account from the list granting this role to the originating account (templated).
     :param upload_metadata: whether to upload the row count metadata as blob metadata
     :param exclude_columns: set of columns to exclude from transmission
+    :param deferrable: run operator in the deferrable mode
     """
 
     template_fields: Sequence[str] = (
@@ -112,6 +114,7 @@ class BaseSQLToGCSOperator(BaseOperator):
         impersonation_chain: str | Sequence[str] | None = None,
         upload_metadata: bool = False,
         exclude_columns=None,
+        deferrable=False,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -135,10 +138,20 @@ class BaseSQLToGCSOperator(BaseOperator):
         self.impersonation_chain = impersonation_chain
         self.upload_metadata = upload_metadata
         self.exclude_columns = exclude_columns
+        self.deferrable = deferrable
 
     def execute(self, context: Context):
         self.log.info("Executing query")
         cursor = self.query()
+
+        if self.deferrable:
+            self.defer(
+                timeout=self.execution_timeout,
+                trigger=GCSUploadObjectsTrigger(
+                    conn_id=self.gcp_conn_id,
+                ),
+                method_name="execute_complete",  # TODO: make sure this method is needed and works as expected
+            )
 
         # If a schema is set, create a BQ schema JSON file.
         if self.schema_filename:

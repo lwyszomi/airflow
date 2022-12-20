@@ -29,7 +29,7 @@ from functools import partial
 from io import BytesIO
 from os import path
 from tempfile import NamedTemporaryFile
-from typing import IO, Callable, Generator, Sequence, TypeVar, cast, overload
+from typing import IO, Any, Callable, Generator, Sequence, TypeVar, cast, overload
 from urllib.parse import urlsplit
 
 from google.api_core.exceptions import NotFound
@@ -43,7 +43,7 @@ from google.cloud.storage.retry import DEFAULT_RETRY
 from airflow.exceptions import AirflowException
 from airflow.providers.google.cloud.utils.helpers import normalize_directory_path
 from airflow.providers.google.common.consts import CLIENT_INFO
-from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
+from airflow.providers.google.common.hooks.base_google import GoogleBaseAsyncHook, GoogleBaseHook
 from airflow.utils import timezone
 from airflow.version import version
 
@@ -1174,3 +1174,13 @@ def _parse_gcs_url(gsurl: str) -> tuple[str, str]:
     # Remove leading '/' but NOT trailing one
     blob = parsed_url.path.lstrip("/")
     return bucket, blob
+
+
+class GCSAsyncHook(GoogleBaseAsyncHook):
+    """Uses gcloud-aio-storage for asynchronous interaction with Google Cloud Storage."""
+
+    def get_conn(self) -> Any:
+        ...
+
+    async def upload(self):
+        ...
