@@ -20,8 +20,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Sequence
 
+import proto
 from google.cloud.speech_v1.types import RecognitionAudio, RecognitionConfig
-from google.protobuf.json_format import MessageToDict
 
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator
@@ -151,7 +151,7 @@ class CloudTranslateSpeechOperator(BaseOperator):
         )
 
         recognize_result = speech_to_text_hook.recognize_speech(config=self.config, audio=self.audio)
-        recognize_dict = MessageToDict(recognize_result)
+        recognize_dict = proto.Message.to_dict(recognize_result)
 
         self.log.info("Recognition operation finished")
 
@@ -166,6 +166,8 @@ class CloudTranslateSpeechOperator(BaseOperator):
             raise AirflowException(
                 f"Wrong response '{recognize_dict}' returned - it should contain {key} field"
             )
+        except IndexError as err:
+            raise AirflowException(f"Wrong response '{recognize_dict}' returned - {err}")
 
         try:
             translation = translate_hook.translate(

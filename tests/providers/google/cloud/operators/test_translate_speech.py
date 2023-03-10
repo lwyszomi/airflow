@@ -21,7 +21,7 @@ import unittest
 from unittest import mock
 
 import pytest
-from google.cloud.speech_v1.proto.cloud_speech_pb2 import (
+from google.cloud.speech_v1.types import (
     RecognizeResponse,
     SpeechRecognitionAlternative,
     SpeechRecognitionResult,
@@ -114,10 +114,8 @@ class TestCloudTranslateSpeech(unittest.TestCase):
             gcp_conn_id=GCP_CONN_ID,
             task_id="id",
         )
-        with pytest.raises(AirflowException) as ctx:
+        with pytest.raises(AirflowException):
             op.execute(context=None)
-        err = ctx.value
-        assert "it should contain 'alternatives' field" in str(err)
 
         mock_speech_hook.assert_called_once_with(
             gcp_conn_id=GCP_CONN_ID,
