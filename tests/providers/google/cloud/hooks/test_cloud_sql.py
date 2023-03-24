@@ -287,7 +287,7 @@ class TestGcpSqlHookDefaultProjectId:
         delete_method.assert_called_once_with(instance="instance", project="example-project")
         execute_method.assert_called_once_with(num_retries=5)
         wait_for_operation_to_complete.assert_called_once_with(
-            operation_name="operation_id", project_id="example-project"
+            operation_name="operation_id", project_id="example-project", time_to_sleep=5
         )
         assert 1 == mock_get_credentials.call_count
 
@@ -322,7 +322,7 @@ class TestGcpSqlHookDefaultProjectId:
         assert 2 == delete_method.call_count
         assert 2 == execute_method.call_count
         wait_for_operation_to_complete.assert_called_once_with(
-            operation_name="operation_id", project_id="example-project"
+            operation_name="operation_id", project_id="example-project", time_to_sleep=5
         )
 
     @mock.patch(
@@ -680,7 +680,7 @@ class TestGcpSqlHookNoDefaultProjectID:
         delete_method.assert_called_once_with(instance="instance", project="example-project")
         execute_method.assert_called_once_with(num_retries=5)
         wait_for_operation_to_complete.assert_called_once_with(
-            operation_name="operation_id", project_id="example-project"
+            operation_name="operation_id", project_id="example-project", time_to_sleep=5
         )
 
     @mock.patch(
