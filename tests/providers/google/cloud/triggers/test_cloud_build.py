@@ -62,6 +62,9 @@ TEST_BUILD_INSTANCE = dict(
             "volumes": [],
             "status": 0,
             "script": "",
+            "allow_failure": False,
+            "exit_code": 0,
+            "allow_exit_codes": [],
         }
     ],
     name="",
@@ -124,7 +127,7 @@ async def test_async_create_build_trigger_triggers_on_success_should_execute_suc
     Tests the CloudBuildCreateBuildTrigger only fires once the job execution reaches a successful state.
     """
     mock_get_build.return_value = Build(
-        id=TEST_BUILD_ID, status=Build.Status.SUCCESS, steps=[BuildStep(name="ubuntu")]
+        dict(id=TEST_BUILD_ID, status=Build.Status.SUCCESS, steps=[BuildStep(name="ubuntu")])
     )
 
     trigger = CloudBuildCreateBuildTrigger(
@@ -162,7 +165,7 @@ async def test_async_create_build_trigger_triggers_on_running_should_execute_suc
     Test that CloudBuildCreateBuildTrigger does not fire while a build is still running.
     """
     mock_get_build.return_value = Build(
-        id=TEST_BUILD_ID, status=Build.Status.WORKING, steps=[BuildStep(name="ubuntu")]
+        dict(id=TEST_BUILD_ID, status=Build.Status.WORKING, steps=[BuildStep(name="ubuntu")])
     )
     caplog.set_level(logging.INFO)
 
@@ -198,7 +201,12 @@ async def test_async_create_build_trigger_triggers_on_error_should_execute_succe
     Test that CloudBuildCreateBuildTrigger fires the correct event in case of an error.
     """
     mock_get_build.return_value = Build(
-        id=TEST_BUILD_ID, status=Build.Status.FAILURE, steps=[BuildStep(name="ubuntu")], status_detail="error"
+        dict(
+            id=TEST_BUILD_ID,
+            status=Build.Status.FAILURE,
+            steps=[BuildStep(dict(name="ubuntu"))],
+            status_detail="error",
+        )
     )
     caplog.set_level(logging.INFO)
 
