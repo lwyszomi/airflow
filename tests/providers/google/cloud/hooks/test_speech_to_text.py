@@ -30,7 +30,7 @@ CONFIG = {"encryption": "LINEAR16"}
 AUDIO = {"uri": "gs://bucket/object"}
 
 
-class TestTextToSpeechOperator:
+class TestCloudSpeechToTextHook:
     def setup_method(self):
         with patch(
             "airflow.providers.google.common.hooks.base_google.GoogleBaseHook.__init__",
