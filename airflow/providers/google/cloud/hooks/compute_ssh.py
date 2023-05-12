@@ -107,6 +107,7 @@ class ComputeEngineSSHHook(SSHHook):
         use_iap_tunnel: bool = False,
         use_oslogin: bool = True,
         expire_time: int = 300,
+        cmd_timeout: int | ArgNotSet = NOTSET,
         **kwargs,
     ) -> None:
         if kwargs.get("delegate_to") is not None:
@@ -126,6 +127,7 @@ class ComputeEngineSSHHook(SSHHook):
         self.use_oslogin = use_oslogin
         self.expire_time = expire_time
         self.gcp_conn_id = gcp_conn_id
+        self.cmd_timeout = cmd_timeout
         self._conn: Any | None = None
 
     @cached_property
