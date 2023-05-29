@@ -15,7 +15,16 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""This module contains Google Dataproc operators."""
+"""
+This module contains Google Dataproc operators.
+
+.. spelling::
+
+    preemptible
+    Preemptibility
+    preemptibility
+    InstanceGroupConfig
+"""
 from __future__ import annotations
 
 import inspect
@@ -26,6 +35,7 @@ import time
 import uuid
 import warnings
 from datetime import datetime, timedelta
+from enum import Enum
 from typing import TYPE_CHECKING, Any, Sequence
 
 from google.api_core import operation  # type: ignore
@@ -61,6 +71,13 @@ from airflow.utils import timezone
 
 if TYPE_CHECKING:
     from airflow.utils.context import Context
+
+
+class PreemptibilityType(Enum):
+    """Contains possible Type values of Preemptibility applicable for every secondary worker of Cluster."""
+
+    PREEMPTIBLE = "PREEMPTIBLE"
+    SPOT = "SPOT"
 
 
 class ClusterGenerator:
@@ -109,7 +126,13 @@ class ClusterGenerator:
         Valid values: ``pd-ssd`` (Persistent Disk Solid State Drive) or
         ``pd-standard`` (Persistent Disk Hard Disk Drive).
     :param worker_disk_size: Disk size for the worker nodes
-    :param num_preemptible_workers: The # of preemptible worker nodes to spin up
+    :param num_preemptible_workers: The # of VM instances in the instance group as secondary workers
+        inside the cluster with Preemptibility enabled by default.
+        Note, that it is not possible to mix non-preemptible and preemptible secondary workers in
+        one cluster.
+    :param preemptibility: The type of Preemptibility applicable for every secondary worker, see
+        https://cloud.google.com/dataproc/docs/reference/rpc/ \
+        google.cloud.dataproc.v1#google.cloud.dataproc.v1.InstanceGroupConfig.Preemptibility
     :param zone: The zone where the cluster will be located. Set to None to auto-zone. (templated)
     :param network_uri: The network uri to be used for machine communication, cannot be
         specified with subnetwork_uri
@@ -164,6 +187,7 @@ class ClusterGenerator:
         worker_disk_type: str = "pd-standard",
         worker_disk_size: int = 1024,
         num_preemptible_workers: int = 0,
+        preemptibility: str = PreemptibilityType.PREEMPTIBLE.value,
         service_account: str | None = None,
         service_account_scopes: list[str] | None = None,
         idle_delete_ttl: int | None = None,
@@ -178,6 +202,7 @@ class ClusterGenerator:
         self.num_masters = num_masters
         self.num_workers = num_workers
         self.num_preemptible_workers = num_preemptible_workers
+        self.preemptibility = self._set_preemptibility_type(preemptibility)
         self.storage_bucket = storage_bucket
         self.init_actions_uris = init_actions_uris
         self.init_action_timeout = init_action_timeout
@@ -220,6 +245,13 @@ class ClusterGenerator:
 
         if self.single_node and self.num_preemptible_workers > 0:
             raise ValueError("Single node cannot have preemptible workers.")
+
+    def _set_preemptibility_type(self, preemptibility):
+        if self.num_preemptible_workers > 0:
+            if preemptibility.lower() == "spot":
+                return PreemptibilityType.SPOT.value
+            else:
+                return preemptibility
 
     def _get_init_action_timeout(self) -> dict:
         match = re.match(r"^(\d+)([sm])$", self.init_action_timeout)
@@ -329,6 +361,7 @@ class ClusterGenerator:
                     "boot_disk_size_gb": self.worker_disk_size,
                 },
                 "is_preemptible": True,
+                "preemptibility": self.preemptibility,
             }
 
         if self.storage_bucket:
@@ -2092,7 +2125,7 @@ class DataprocUpdateClusterOperator(GoogleCloudBaseOperator):
         allowed timeout is 1 day.
     :param request_id: Optional. A unique id used to identify the request. If the server receives two
         ``UpdateClusterRequest`` requests with the same id, then the second request will be ignored and the
-        first ``google.longrunning.Operation`` created and stored in the backend is returned.
+        first ``google.long-running.Operation`` created and stored in the backend is returned.
     :param retry: A retry object used to retry requests. If ``None`` is specified, requests will not be
         retried.
     :param timeout: The amount of time, in seconds, to wait for the request to complete. Note that if
