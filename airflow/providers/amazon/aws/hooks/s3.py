@@ -384,6 +384,7 @@ class S3Hook(AwsBaseHook):
         from_datetime: datetime | None = None,
         to_datetime: datetime | None = None,
         object_filter: Callable[..., list] | None = None,
+        apply_wildcard: bool = False,
     ) -> list:
         """
         Lists keys in a bucket under prefix and not containing delimiter
@@ -402,6 +403,7 @@ class S3Hook(AwsBaseHook):
         :param to_datetime: should return only keys with LastModified attr less than this to_datetime
         :param object_filter: Function that receives the list of the S3 objects, from_datetime and
             to_datetime and returns the List of matched key.
+        :param apply_wildcard: whether to treat '*' as a wildcard or a plain symbol in the prefix.
 
         **Example**: Returns the list of S3 object with LastModified attr greater than from_datetime
              and less than to_datetime:
@@ -425,7 +427,10 @@ class S3Hook(AwsBaseHook):
 
         :return: a list of matched keys
         """
-        prefix = prefix or ""
+        _prefix = prefix or ""
+        wildcard_prefix = _prefix
+        if apply_wildcard and "*" in _prefix:
+            wildcard_prefix = _prefix.split("*", 1)[0]
         delimiter = delimiter or ""
         start_after_key = start_after_key or ""
         self.object_filter_usr = object_filter
@@ -437,7 +442,7 @@ class S3Hook(AwsBaseHook):
         paginator = self.get_conn().get_paginator("list_objects_v2")
         response = paginator.paginate(
             Bucket=bucket_name,
-            Prefix=prefix,
+            Prefix=wildcard_prefix,
             Delimiter=delimiter,
             PaginationConfig=config,
             StartAfter=start_after_key,
@@ -446,7 +451,10 @@ class S3Hook(AwsBaseHook):
         keys: list[str] = []
         for page in response:
             if "Contents" in page:
-                keys.extend(iter(page["Contents"]))
+                if apply_wildcard and "*" in _prefix:
+                    keys.extend(obj for obj in page["Contents"] if fnmatch.fnmatch(obj["Key"], _prefix))
+                else:
+                    keys.extend(iter(page["Contents"]))
         if self.object_filter_usr is not None:
             return self.object_filter_usr(keys, from_datetime, to_datetime)
 

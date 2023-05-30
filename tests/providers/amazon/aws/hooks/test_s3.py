@@ -221,6 +221,7 @@ class TestAwsS3Hook:
         hook = S3Hook()
         bucket = hook.get_bucket(s3_bucket)
         bucket.put_object(Key="a", Body=b"a")
+        bucket.put_object(Key="ba", Body=b"ab")
         bucket.put_object(Key="dir/b", Body=b"b")
 
         from_datetime = datetime(1992, 3, 8, 18, 52, 51)
@@ -230,14 +231,16 @@ class TestAwsS3Hook:
             return []
 
         assert [] == hook.list_keys(s3_bucket, prefix="non-existent/")
-        assert ["a", "dir/b"] == hook.list_keys(s3_bucket)
-        assert ["a"] == hook.list_keys(s3_bucket, delimiter="/")
+        assert ["a", "ba", "dir/b"] == hook.list_keys(s3_bucket)
+        assert ["a", "ba"] == hook.list_keys(s3_bucket, delimiter="/")
         assert ["dir/b"] == hook.list_keys(s3_bucket, prefix="dir/")
-        assert ["dir/b"] == hook.list_keys(s3_bucket, start_after_key="a")
+        assert ["ba", "dir/b"] == hook.list_keys(s3_bucket, start_after_key="a")
         assert [] == hook.list_keys(s3_bucket, from_datetime=from_datetime, to_datetime=to_datetime)
         assert [] == hook.list_keys(
             s3_bucket, from_datetime=from_datetime, to_datetime=to_datetime, object_filter=dummy_object_filter
         )
+        assert [] == hook.list_keys(s3_bucket, prefix="*a")
+        assert ["a", "ba"] == hook.list_keys(s3_bucket, prefix="*a", apply_wildcard=True)
 
     def test_list_keys_paged(self, s3_bucket):
         hook = S3Hook()
