@@ -39,12 +39,15 @@ class TestComputeEngineHookWithPassedProjectId:
         with pytest.raises(RuntimeError):
             ComputeEngineSSHHook(gcp_conn_id="gcpssh", delegate_to="delegate_to")
 
+    @mock.patch(
+        "airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._check_running_in_parallel"
+    )
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.OSLoginHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.paramiko")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh._GCloudAuthorizedSSHClient")
     def test_get_conn_default_configuration(
-        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook
+        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook, mock_running_parallel
     ):
         mock_paramiko.SSHException = Exception
         mock_paramiko.RSAKey.generate.return_value.get_name.return_value = "NAME"
@@ -59,6 +62,7 @@ class TestComputeEngineHookWithPassedProjectId:
         ]
 
         hook = ComputeEngineSSHHook(instance_name=TEST_INSTANCE_NAME, zone=TEST_ZONE)
+        mock_running_parallel.return_value = False
         result = hook.get_conn()
         assert mock_ssh_client.return_value == result
 
@@ -101,12 +105,15 @@ class TestComputeEngineHookWithPassedProjectId:
 
         mock_compute_hook.return_value.set_instance_metadata.assert_not_called()
 
+    @mock.patch(
+        "airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._check_running_in_parallel"
+    )
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.OSLoginHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.paramiko")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh._GCloudAuthorizedSSHClient")
     def test_get_conn_authorize_using_instance_metadata(
-        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook
+        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook, mock_running_parallel
     ):
         mock_paramiko.SSHException = Exception
         mock_paramiko.RSAKey.generate.return_value.get_name.return_value = "NAME"
@@ -116,6 +123,8 @@ class TestComputeEngineHookWithPassedProjectId:
         mock_compute_hook.return_value.get_instance_address.return_value = EXTERNAL_IP
 
         mock_compute_hook.return_value.get_instance_info.return_value = {"metadata": {}}
+
+        mock_running_parallel.return_value = False
 
         hook = ComputeEngineSSHHook(instance_name=TEST_INSTANCE_NAME, zone=TEST_ZONE, use_oslogin=False)
         result = hook.get_conn()
@@ -159,12 +168,15 @@ class TestComputeEngineHookWithPassedProjectId:
 
         mock_os_login_hook.return_value.import_ssh_public_key.assert_not_called()
 
+    @mock.patch(
+        "airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._check_running_in_parallel"
+    )
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.OSLoginHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.paramiko")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh._GCloudAuthorizedSSHClient")
     def test_get_conn_authorize_using_instance_metadata_append_ssh_keys(
-        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook
+        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook, mock_running_parallel
     ):
         del mock_os_login_hook
         mock_paramiko.SSHException = Exception
@@ -173,6 +185,57 @@ class TestComputeEngineHookWithPassedProjectId:
 
         mock_compute_hook.return_value.project_id = TEST_PROJECT_ID
         mock_compute_hook.return_value.get_instance_address.return_value = EXTERNAL_IP
+
+        mock_compute_hook.return_value.get_instance_info.return_value = {
+            "metadata": {"items": [{"key": "ssh-keys", "value": f"{TEST_PUB_KEY2}\n"}]}
+        }
+
+        mock_running_parallel.return_value = False
+
+        hook = ComputeEngineSSHHook(instance_name=TEST_INSTANCE_NAME, zone=TEST_ZONE, use_oslogin=False)
+        result = hook.get_conn()
+        assert mock_ssh_client.return_value == result
+
+        mock_compute_hook.return_value.set_instance_metadata.assert_called_once_with(
+            metadata={"items": [{"key": "ssh-keys", "value": f"{TEST_PUB_KEY}\n{TEST_PUB_KEY2}\n"}]},
+            project_id=TEST_PROJECT_ID,
+            resource_id=TEST_INSTANCE_NAME,
+            zone=TEST_ZONE,
+        )
+
+    @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._release_lock")
+    @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._acquire_lock")
+    @mock.patch(
+        "airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._create_bucket_to_handle_lock"
+    )
+    @mock.patch(
+        "airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._check_running_in_parallel"
+    )
+    @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineHook")
+    @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.OSLoginHook")
+    @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.paramiko")
+    @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh._GCloudAuthorizedSSHClient")
+    def test_get_conn_authorize_using_instance_metadata_append_ssh_keys_parallel_execution(
+        self,
+        mock_ssh_client,
+        mock_paramiko,
+        mock_os_login_hook,
+        mock_compute_hook,
+        mock_running_parallel,
+        mock_bucket,
+        mock_locking,
+        mock_releasing,
+    ):
+        del mock_os_login_hook
+        mock_paramiko.SSHException = Exception
+        mock_paramiko.RSAKey.generate.return_value.get_name.return_value = "NAME"
+        mock_paramiko.RSAKey.generate.return_value.get_base64.return_value = "AYZ"
+
+        mock_compute_hook.return_value.project_id = TEST_PROJECT_ID
+        mock_compute_hook.return_value.get_instance_address.return_value = EXTERNAL_IP
+
+        mock_running_parallel.return_value = True
+        mock_locking.return_value = True
 
         mock_compute_hook.return_value.get_instance_info.return_value = {
             "metadata": {"items": [{"key": "ssh-keys", "value": f"{TEST_PUB_KEY2}\n"}]}
@@ -189,11 +252,16 @@ class TestComputeEngineHookWithPassedProjectId:
             zone=TEST_ZONE,
         )
 
+    @mock.patch(
+        "airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._check_running_in_parallel"
+    )
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.OSLoginHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.paramiko")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh._GCloudAuthorizedSSHClient")
-    def test_get_conn_private_ip(self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook):
+    def test_get_conn_private_ip(
+        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook, mock_running_parallel
+    ):
         del mock_os_login_hook
         mock_paramiko.SSHException = Exception
         mock_paramiko.RSAKey.generate.return_value.get_name.return_value = "NAME"
@@ -203,6 +271,8 @@ class TestComputeEngineHookWithPassedProjectId:
         mock_compute_hook.return_value.get_instance_address.return_value = INTERNAL_IP
 
         mock_compute_hook.return_value.get_instance_info.return_value = {"metadata": {}}
+
+        mock_running_parallel.return_value = False
 
         hook = ComputeEngineSSHHook(
             instance_name=TEST_INSTANCE_NAME, zone=TEST_ZONE, use_oslogin=False, use_internal_ip=True
@@ -217,15 +287,20 @@ class TestComputeEngineHookWithPassedProjectId:
             hostname=INTERNAL_IP, look_for_keys=mock.ANY, pkey=mock.ANY, sock=mock.ANY, username=mock.ANY
         )
 
+    @mock.patch(
+        "airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._check_running_in_parallel"
+    )
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.OSLoginHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.paramiko")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh._GCloudAuthorizedSSHClient")
     def test_get_conn_custom_hostname(
-        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook
+        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook, mock_running_parallel
     ):
         del mock_os_login_hook
         mock_paramiko.SSHException = Exception
+
+        mock_running_parallel.return_value = False
 
         hook = ComputeEngineSSHHook(
             instance_name=TEST_INSTANCE_NAME,
@@ -245,15 +320,22 @@ class TestComputeEngineHookWithPassedProjectId:
             username=mock.ANY,
         )
 
+    @mock.patch(
+        "airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._check_running_in_parallel"
+    )
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.OSLoginHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.paramiko")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh._GCloudAuthorizedSSHClient")
-    def test_get_conn_iap_tunnel(self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook):
+    def test_get_conn_iap_tunnel(
+        self, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook, mock_running_parallel
+    ):
         del mock_os_login_hook
         mock_paramiko.SSHException = Exception
 
         mock_compute_hook.return_value.project_id = TEST_PROJECT_ID
+
+        mock_running_parallel.return_value = False
 
         hook = ComputeEngineSSHHook(
             instance_name=TEST_INSTANCE_NAME, zone=TEST_ZONE, use_oslogin=False, use_iap_tunnel=True
@@ -274,13 +356,22 @@ class TestComputeEngineHookWithPassedProjectId:
             f"--zone={TEST_ZONE} --verbosity=warning"
         )
 
+    @mock.patch(
+        "airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineSSHHook._check_running_in_parallel"
+    )
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.ComputeEngineHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.OSLoginHook")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.paramiko")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh._GCloudAuthorizedSSHClient")
     @mock.patch("airflow.providers.google.cloud.hooks.compute_ssh.time.sleep")
     def test_get_conn_retry_on_connection_error(
-        self, mock_time, mock_ssh_client, mock_paramiko, mock_os_login_hook, mock_compute_hook
+        self,
+        mock_time,
+        mock_ssh_client,
+        mock_paramiko,
+        mock_os_login_hook,
+        mock_compute_hook,
+        mock_running_parallel,
     ):
         del mock_os_login_hook
         del mock_compute_hook
@@ -291,6 +382,7 @@ class TestComputeEngineHookWithPassedProjectId:
         mock_paramiko.SSHException = CustomException
         mock_ssh_client.return_value.connect.side_effect = [CustomException, CustomException, True]
         hook = ComputeEngineSSHHook(instance_name=TEST_INSTANCE_NAME, zone=TEST_ZONE)
+        mock_running_parallel.return_value = False
         hook.get_conn()
 
         assert 3 == mock_ssh_client.return_value.connect.call_count

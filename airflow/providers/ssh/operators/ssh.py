@@ -169,6 +169,13 @@ class SSHOperator(BaseOperator):
         # Forcing get_pty to True if the command begins with "sudo".
         self.get_pty = self.command.startswith("sudo") or self.get_pty
 
+        # Adding context here to be able to check the dag config
+        # and concurrent tasks running in it in the hook
+        from airflow.providers.ssh.hooks.ssh import SSHHook
+
+        if self.ssh_hook and isinstance(self.ssh_hook, SSHHook):
+            self.ssh_hook.context = context  # type: ignore
+
         with self.get_ssh_client() as ssh_client:
             result = self.run_ssh_client_command(ssh_client, self.command, context=context)
         enable_pickling = conf.getboolean("core", "enable_xcom_pickling")

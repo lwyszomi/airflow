@@ -16,18 +16,25 @@
 # under the License.
 from __future__ import annotations
 
+import os
 import shlex
 import time
 from functools import cached_property
 from io import StringIO
+from subprocess import PIPE, STDOUT, CalledProcessError, Popen, TimeoutExpired, check_output
 from typing import Any
 
+from google.api_core.exceptions import Conflict
 from google.api_core.retry import exponential_sleep_generator
 
 from airflow import AirflowException
+from airflow.models import TaskInstance
 from airflow.providers.google.cloud.hooks.compute import ComputeEngineHook
+from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from airflow.providers.google.cloud.hooks.os_login import OSLoginHook
 from airflow.providers.ssh.hooks.ssh import SSHHook
+from airflow.utils.session import create_session
+from airflow.utils.state import State
 from airflow.utils.types import NOTSET, ArgNotSet
 
 # Paramiko should be imported after airflow.providers.ssh. Then the import will fail with
@@ -191,6 +198,126 @@ class ComputeEngineSSHHook(SSHHook):
             if self.cmd_timeout is NOTSET:
                 self.cmd_timeout = CMD_TIMEOUT
 
+    def _check_running_in_parallel(self) -> bool:
+        """
+        Helper function to determine if there are several tasks that are running in parallel.
+
+        :return: boolean, True if there are more than 1 task running at the same time
+        """
+        dag_id = self.context["dag"].dag_id  # type: ignore
+        with create_session() as session:
+            query = (
+                session.query(TaskInstance)
+                .filter(TaskInstance.state == State.RUNNING, TaskInstance.dag_id == dag_id)
+                .all()
+            )
+            running_tasks = set(query)
+        return len(running_tasks) > 1
+
+    def _create_bucket_to_handle_lock(self, bucket_name) -> None:
+        """
+        Helper function to create a bucket to hold file lock.
+        :param bucket_name:
+        :return: string representation of the path to the lock file in the created bucket.
+        """
+        hook = GCSHook(gcp_conn_id="google_cloud_default")
+        try:
+            hook.create_bucket(bucket_name=bucket_name, location="US", project_id=self.project_id)
+        except Conflict:
+            self.log.info("Bucket %s already exists", bucket_name)
+
+    def _delete_bucket_after_lock_release(self, bucket_name) -> None:
+        """
+        Check if there are no remaining processes running in parallel. This will indicate that all the
+        processes finished their execution, and we can safely delete the bucket.
+        """
+        if not self._check_running_in_parallel():
+            try:
+                cmd = f"gsutil rm -r gs://{bucket_name}"
+                check_output(cmd, shell=True, stderr=STDOUT)
+            except CalledProcessError as error:
+                self.log.info("Failed with return code: %s", error.returncode)
+                raise
+            except FileNotFoundError:
+                self.log.info("Specified bucket does not exist")
+                raise
+            except TimeoutExpired:
+                self.log.info("Command execution timed out")
+                raise
+
+    def _acquire_lock(self, lock_path: str) -> bool:
+        """
+        Creates a lock with the specified GCS path and acquire it immediately if it is still free.
+        :param lock_path: the lock's GCS path
+        :return: True if the lock was acquired.
+        """
+        echo = Popen('echo "lock"', shell=True, stdout=PIPE)
+        try:
+            # command to upload the content of echo command to the specified file in gcs.
+            # Specified flags for the command will ensure that the upload only occurres if the generation
+            # of the file is 0, that indicate that the file was not modified after the creation to
+            # prevent unintentional overwriting of file
+            cmd = f'gsutil -h "x-goog-if-generation-match:0" cp - {lock_path}'
+
+            # executing command above, passing output of echo command as an input param to the cmd
+            check_output(cmd, stdin=echo.stdout, shell=True, stderr=STDOUT)
+            echo.wait()
+            return True
+        except CalledProcessError:
+            return False
+
+    def _release_lock(self, lock_path: str) -> None:
+        """
+        Releases the specified lock.
+        :param lock_path: the lock's GCS path with the gs://bucket-name/file-name format
+        :return: None.
+        """
+        try:
+            cmd = f"gsutil -q rm {lock_path}"
+            check_output(cmd, shell=True, stderr=STDOUT)
+        except CalledProcessError as error:
+            self.log.info("Failed with return code: %s", error.returncode)
+            raise
+        except FileNotFoundError:
+            self.log.info("Specified file does not exist")
+            raise
+        except TimeoutExpired:
+            self.log.info("Command execution timed out")
+            raise
+
+    def _check_running_in_parallel_and_start_process(self, func, **kwargs):
+        """
+        Check if the process is running in parallel and run the function based on the result
+        :param func: name of the function to be executed after checking if the process is running in parallel
+        :return: result of the function that was called.
+        """
+        bucket_name = f"tmp_bucket_{self.project_id}_{os.environ.get('SYSTEM_TESTS_ENV_ID')}"
+        lock_file_name = "file.lock"
+        lock_path = f"gs://{bucket_name}/{lock_file_name}"
+        result = None
+
+        if self._check_running_in_parallel():
+            self.log.info("Several processes are executed in parallel")
+
+            self._create_bucket_to_handle_lock(bucket_name=bucket_name)
+
+            max_time_to_wait = 120
+            for time_to_wait in exponential_sleep_generator(initial=1, maximum=max_time_to_wait):
+                if self._acquire_lock(lock_path=lock_path):
+                    try:
+                        result = func(**kwargs)
+                    finally:
+                        self._release_lock(lock_path=lock_path)
+                        self._delete_bucket_after_lock_release(bucket_name=bucket_name)
+                        break
+                self.log.info("Another process is running, waiting %ds to retry...", time_to_wait)
+                time.sleep(time_to_wait)
+                if time_to_wait == max_time_to_wait:
+                    raise AirflowException("Timeout reached, aborting")
+        else:
+            result = func(**kwargs)
+        return result
+
     def get_conn(self) -> paramiko.SSHClient:
         """Return SSH connection."""
         self._load_connection_config()
@@ -226,10 +353,12 @@ class ComputeEngineSSHHook(SSHHook):
 
         privkey, pubkey = self._generate_ssh_key(self.user)
         if self.use_oslogin:
-            user = self._authorize_os_login(pubkey)
+            user = self._check_running_in_parallel_and_start_process(self._authorize_os_login, pubkey=pubkey)
         else:
             user = self.user
-            self._authorize_compute_engine_instance_metadata(pubkey)
+            self._check_running_in_parallel_and_start_process(
+                self._authorize_compute_engine_instance_metadata, pubkey=pubkey
+            )
 
         proxy_command = None
         if self.use_iap_tunnel:
@@ -303,9 +432,11 @@ class ComputeEngineSSHHook(SSHHook):
         self.log.info("Importing SSH public key using OSLogin: user=%s", username)
         expiration = int((time.time() + self.expire_time) * 1000000)
         ssh_public_key = {"key": pubkey, "expiration_time_usec": expiration}
+
         response = self._oslogin_hook.import_ssh_public_key(
             user=username, ssh_public_key=ssh_public_key, project_id=self.project_id
         )
+
         profile = response.login_profile
         account = profile.posix_accounts[0]
         user = account.username
