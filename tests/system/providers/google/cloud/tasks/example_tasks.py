@@ -18,9 +18,6 @@
 """
 Example Airflow DAG that creates and deletes Queues and creates, gets, lists,
 runs and deletes Tasks in the Google Cloud Tasks service in the Google Cloud.
-
-Required setup:
-- GCP_APP_ENGINE_LOCATION: GCP Project's App Engine location `gcloud app describe | grep locationId`.
 """
 from __future__ import annotations
 
@@ -48,22 +45,20 @@ from airflow.utils.trigger_rule import TriggerRule
 ENV_ID = os.environ.get("SYSTEM_TESTS_ENV_ID")
 DAG_ID = "cloud_tasks_tasks"
 
-timestamp = timestamp_pb2.Timestamp()
-timestamp.FromDatetime(datetime.now() + timedelta(hours=12))
+TIMESTAMP = timestamp_pb2.Timestamp()
+TIMESTAMP.FromDatetime(datetime.now() + timedelta(hours=12))
 
-LOCATION = os.environ.get("GCP_APP_ENGINE_LOCATION", "europe-west2")
+REGION = "us-central1"
 # queue cannot use recent names even if queue was removed
 QUEUE_ID = f"queue-{ENV_ID}-{DAG_ID.replace('_', '-')}"
 TASK_NAME = "task-to-run"
-
-
 TASK = {
-    "app_engine_http_request": {  # Specify the type of request.
+    "http_request": {
         "http_method": "POST",
-        "relative_uri": "/example_task_handler",
-        "body": b"Hello",
+        "url": "http://www.example.com/example",
+        "body": b"",
     },
-    "schedule_time": timestamp,
+    "schedule_time": TIMESTAMP,
 }
 
 with models.DAG(
@@ -89,7 +84,7 @@ with models.DAG(
     random_string = generate_random_string()
 
     create_queue = CloudTasksQueueCreateOperator(
-        location=LOCATION,
+        location=REGION,
         task_queue=Queue(stackdriver_logging_config=dict(sampling_ratio=0.5)),
         queue_name=QUEUE_ID + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         retry=Retry(maximum=10.0),
@@ -98,7 +93,7 @@ with models.DAG(
     )
 
     delete_queue = CloudTasksQueueDeleteOperator(
-        location=LOCATION,
+        location=REGION,
         queue_name=QUEUE_ID + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         task_id="delete_queue",
     )
@@ -106,7 +101,7 @@ with models.DAG(
 
     # [START create_task]
     create_task = CloudTasksTaskCreateOperator(
-        location=LOCATION,
+        location=REGION,
         queue_name=QUEUE_ID + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         task=TASK,
         task_name=TASK_NAME + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
@@ -118,7 +113,7 @@ with models.DAG(
 
     # [START tasks_get]
     tasks_get = CloudTasksTaskGetOperator(
-        location=LOCATION,
+        location=REGION,
         queue_name=QUEUE_ID + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         task_name=TASK_NAME + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         task_id="tasks_get",
@@ -127,7 +122,7 @@ with models.DAG(
 
     # [START run_task]
     run_task = CloudTasksTaskRunOperator(
-        location=LOCATION,
+        location=REGION,
         queue_name=QUEUE_ID + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         task_name=TASK_NAME + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         retry=Retry(maximum=10.0),
@@ -137,7 +132,7 @@ with models.DAG(
 
     # [START list_tasks]
     list_tasks = CloudTasksTasksListOperator(
-        location=LOCATION,
+        location=REGION,
         queue_name=QUEUE_ID + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         task_id="list_tasks",
     )
@@ -145,7 +140,7 @@ with models.DAG(
 
     # [START delete_task]
     delete_task = CloudTasksTaskDeleteOperator(
-        location=LOCATION,
+        location=REGION,
         queue_name=QUEUE_ID + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         task_name=TASK_NAME + "{{ task_instance.xcom_pull(task_ids='random_string') }}",
         task_id="delete_task",
