@@ -886,3 +886,92 @@ class DataplexGetDataQualityScanResultOperator(GoogleCloudBaseOperator):
             raise AirflowException(f"Job was cancelled:\n{job_id}")
         self.log.info("%s completed successfully.", self.task_id)
         return event["job"]
+
+
+class DataplexCreateZoneOperator(GoogleCloudBaseOperator):
+    """
+    Creates a zone resource within a lake.
+
+    :param project_id: Required. The ID of the Google Cloud project that the task belongs to.
+    :param region: Required. The ID of the Google Cloud region that the task belongs to.
+    :param lake_id: Required. The ID of the Google Cloud lake that the task belongs to.
+    :param zone:  Required. The Request body contains an instance of Task.
+    :param zone_id: Required. Task identifier.
+    :param api_version: The version of the api that will be requested for example 'v3'.
+    :param retry: A retry object used  to retry requests. If `None` is specified, requests
+        will not be retried.
+    :param timeout: The amount of time, in seconds, to wait for the request to complete.
+        Note that if `retry` is specified, the timeout applies to each individual attempt.
+    :param metadata: Additional metadata that is provided to the method.
+    :param gcp_conn_id: The connection ID to use when fetching connection info.
+    :param impersonation_chain: Optional service account to impersonate using short-term
+        credentials, or chained list of accounts required to get the access_token
+        of the last account in the list, which will be impersonated in the request.
+        If set as a string, the account must grant the originating account
+        the Service Account Token Creator IAM role.
+        If set as a sequence, the identities from the list must grant
+        Service Account Token Creator IAM role to the directly preceding identity, with first
+        account from the list granting this role to the originating account (templated).
+
+    :return: None
+    """
+
+    template_fields = (
+        "project_id",
+        "zone_id",
+        "zone",
+        "lake_id",
+        "impersonation_chain",
+    )
+    template_fields_renderers = {"zone": "json"}
+
+    def __init__(
+        self,
+        project_id: str,
+        region: str,
+        lake_id: str,
+        zone: dict[str, Any],
+        zone_id: str,
+        api_version: str = "v1",
+        retry: Retry | _MethodDefault = DEFAULT,
+        timeout: float | None = None,
+        metadata: Sequence[tuple[str, str]] = (),
+        gcp_conn_id: str = "google_cloud_default",
+        impersonation_chain: str | Sequence[str] | None = None,
+        *args,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.project_id = project_id
+        self.region = region
+        self.lake_id = lake_id
+        self.zone = zone
+        self.zone_id = zone_id
+        self.api_version = api_version
+        self.retry = retry
+        self.timeout = timeout
+        self.metadata = metadata
+        self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
+
+    def execute(self, context: Context):
+        hook = DataplexHook(
+            gcp_conn_id=self.gcp_conn_id,
+            api_version=self.api_version,
+            impersonation_chain=self.impersonation_chain,
+        )
+        self.log.info("Creating Dataplex zone %s", self.zone_id)
+
+        operation = hook.create_zone(
+            project_id=self.project_id,
+            region=self.region,
+            lake_id=self.lake_id,
+            zone=self.zone,
+            zone_id=self.zone_id,
+            retry=self.retry,
+            timeout=self.timeout,
+            metadata=self.metadata,
+        )
+
+        operation.result()
+        self.log.info("Dataplex zone %s created successfully!", self.zone_id)

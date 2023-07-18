@@ -203,3 +203,28 @@ Also for all this action you can use operator in the deferrable mode:
     :dedent: 4
     :start-after: [START howto_dataplex_get_data_quality_job_def_operator]
     :end-before: [END howto_dataplex_get_data_quality_job_def_operator]
+
+Create a zone
+-------------
+
+Before you create a dataplex zone you need to define its body.
+
+For more information about the available fields to pass when creating a zone, visit `Dataplex create zone API. <https://cloud.google.com/dataplex/docs/reference/rest/v1/projects.locations.lakes.zones#Zone>`__
+
+A simple zone configuration can look as followed:
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex_dq.py
+    :language: python
+    :dedent: 0
+    :start-after: [START howto_dataplex_zone_configuration]
+    :end-before: [END howto_dataplex_zone_configuration]
+
+With this configuration we can create the zone:
+
+:class:`~airflow.providers.google.cloud.operators.dataplex.DataplexCreateZoneOperator`
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex_dq.py
+    :language: python
+    :dedent: 4
+    :start-after: [START howto_dataplex_create_zone_operator]
+    :end-before: [END howto_dataplex_create_zone_operator]
