@@ -1232,77 +1232,77 @@ class DataplexCreateLakeOperator(GoogleCloudBaseOperator):
 #         operation.result()
 #         self.log.info("Dataplex asset %s deleted successfully!", self.asset_id)
 
-
-class DataplexDeleteDataQualityOperator(GoogleCloudBaseOperator):
-    """
-    Deletes a DataScan resource.
-
-    :param project_id: Required. The ID of the Google Cloud project that the lake belongs to.
-    :param region: Required. The ID of the Google Cloud region that the lake belongs to.
-    :param data_scan_id: Required. Data scan identifier.
-    :param api_version: The version of the api that will be requested for example 'v1'.
-    :param retry: A retry object used  to retry requests. If `None` is specified, requests
-        will not be retried.
-    :param timeout: The amount of time, in seconds, to wait for the request to complete.
-        Note that if `retry` is specified, the timeout applies to each individual attempt.
-    :param metadata: Additional metadata that is provided to the method.
-    :param gcp_conn_id: The connection ID to use when fetching connection info.
-    :param impersonation_chain: Optional service account to impersonate using short-term
-        credentials, or chained list of accounts required to get the access_token
-        of the last account in the list, which will be impersonated in the request.
-        If set as a string, the account must grant the originating account
-        the Service Account Token Creator IAM role.
-        If set as a sequence, the identities from the list must grant
-        Service Account Token Creator IAM role to the directly preceding identity, with first
-        account from the list granting this role to the originating account (templated).
-    :return None
-    """
-
-    template_fields = ("project_id", "data_scan_id", "impersonation_chain")
-
-    def __init__(
-        self,
-        project_id: str,
-        region: str,
-        data_scan_id: str,
-        api_version: str = "v1",
-        retry: Retry | _MethodDefault = DEFAULT,
-        timeout: float | None = None,
-        metadata: Sequence[tuple[str, str]] = (),
-        gcp_conn_id: str = "google_cloud_default",
-        impersonation_chain: str | Sequence[str] | None = None,
-        *args,
-        **kwargs,
-    ) -> None:
-
-        super().__init__(*args, **kwargs)
-        self.project_id = project_id
-        self.region = region
-        self.data_scan_id = data_scan_id
-        self.api_version = api_version
-        self.retry = retry
-        self.timeout = timeout
-        self.metadata = metadata
-        self.gcp_conn_id = gcp_conn_id
-        self.impersonation_chain = impersonation_chain
-
-    def execute(self, context: Context) -> None:
-
-        hook = DataplexHook(
-            gcp_conn_id=self.gcp_conn_id,
-            api_version=self.api_version,
-            impersonation_chain=self.impersonation_chain,
-        )
-
-        self.log.info("Deleting Dataplex data scan job: %s", self.data_scan_id)
-
-        operation = hook.delete_data_scan(
-            project_id=self.project_id,
-            region=self.region,
-            data_scan_id=self.data_scan_id,
-            retry=self.retry,
-            timeout=self.timeout,
-            metadata=self.metadata,
-        )
-        operation.result()
-        self.log.info("Dataplex data_scan %s deleted successfully!", self.data_scan_id)
+#
+# class DataplexDeleteDataQualityOperator(GoogleCloudBaseOperator):
+#     """
+#     Deletes a DataScan resource.
+#
+#     :param project_id: Required. The ID of the Google Cloud project that the lake belongs to.
+#     :param region: Required. The ID of the Google Cloud region that the lake belongs to.
+#     :param data_scan_id: Required. Data scan identifier.
+#     :param api_version: The version of the api that will be requested for example 'v1'.
+#     :param retry: A retry object used  to retry requests. If `None` is specified, requests
+#         will not be retried.
+#     :param timeout: The amount of time, in seconds, to wait for the request to complete.
+#         Note that if `retry` is specified, the timeout applies to each individual attempt.
+#     :param metadata: Additional metadata that is provided to the method.
+#     :param gcp_conn_id: The connection ID to use when fetching connection info.
+#     :param impersonation_chain: Optional service account to impersonate using short-term
+#         credentials, or chained list of accounts required to get the access_token
+#         of the last account in the list, which will be impersonated in the request.
+#         If set as a string, the account must grant the originating account
+#         the Service Account Token Creator IAM role.
+#         If set as a sequence, the identities from the list must grant
+#         Service Account Token Creator IAM role to the directly preceding identity, with first
+#         account from the list granting this role to the originating account (templated).
+#     :return: None
+#     """
+#
+#     template_fields = ("project_id", "data_scan_id", "impersonation_chain")
+#
+#     def __init__(
+#         self,
+#         project_id: str,
+#         region: str,
+#         data_scan_id: str,
+#         api_version: str = "v1",
+#         retry: Retry | _MethodDefault = DEFAULT,
+#         timeout: float | None = None,
+#         metadata: Sequence[tuple[str, str]] = (),
+#         gcp_conn_id: str = "google_cloud_default",
+#         impersonation_chain: str | Sequence[str] | None = None,
+#         *args,
+#         **kwargs,
+#     ) -> None:
+#
+#         super().__init__(*args, **kwargs)
+#         self.project_id = project_id
+#         self.region = region
+#         self.data_scan_id = data_scan_id
+#         self.api_version = api_version
+#         self.retry = retry
+#         self.timeout = timeout
+#         self.metadata = metadata
+#         self.gcp_conn_id = gcp_conn_id
+#         self.impersonation_chain = impersonation_chain
+#
+#     def execute(self, context: Context) -> None:
+#
+#         hook = DataplexHook(
+#             gcp_conn_id=self.gcp_conn_id,
+#             api_version=self.api_version,
+#             impersonation_chain=self.impersonation_chain,
+#         )
+#
+#         self.log.info("Deleting Dataplex data scan job: %s", self.data_scan_id)
+#
+#         operation = hook.delete_data_scan(
+#             project_id=self.project_id,
+#             region=self.region,
+#             data_scan_id=self.data_scan_id,
+#             retry=self.retry,
+#             timeout=self.timeout,
+#             metadata=self.metadata,
+#         )
+#         operation.result()
+#         self.log.info("Dataplex data_scan %s deleted successfully!", self.data_scan_id)
