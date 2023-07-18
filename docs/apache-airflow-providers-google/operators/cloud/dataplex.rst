@@ -181,3 +181,25 @@ Also for all this action you can use operator in the deferrable mode:
     :dedent: 4
     :start-after: [START howto_dataplex_execute_data_quality_def_operator]
     :end-before: [END howto_dataplex_execute_data_quality_def_operator]
+
+Get a data quality job
+----------------------
+
+To get a data quality job you can use:
+
+:class:`~airflow.providers.google.cloud.operators.dataplex.DataplexGetDataQualityScanResultOperator`
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex_dq.py
+    :language: python
+    :dedent: 4
+    :start-after: [START howto_dataplex_get_data_quality_job_operator]
+    :end-before: [END howto_dataplex_get_data_quality_job_operator]
+
+
+Also for all this action you can use operator in the deferrable mode:
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex_dq.py
+    :language: python
+    :dedent: 4
+    :start-after: [START howto_dataplex_get_data_quality_job_def_operator]
+    :end-before: [END howto_dataplex_get_data_quality_job_def_operator]
