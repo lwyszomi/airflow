@@ -139,3 +139,26 @@ With this configuration we can create the data quality:
     :dedent: 4
     :start-after: [START howto_dataplex_create_data_quality_operator]
     :end-before: [END howto_dataplex_create_data_quality_operator]
+
+Run a data quality
+------------------
+
+To run Dataplex data quality you can use:
+
+:class:`~airflow.providers.google.cloud.operators.dataplex.DataplexRunDataQualityScanOperator`
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex_dq.py
+    :language: python
+    :dedent: 4
+    :start-after: [START howto_dataplex_run_data_quality_operator]
+    :end-before: [END howto_dataplex_run_data_quality_operator]
+
+To check that running Dataplex data quality succeeded you can use:
+
+:class:`~airflow.providers.google.cloud.sensors.dataplex.DataplexDataQualityJobStatusSensor`.
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex_dq.py
+    :language: python
+    :dedent: 4
+    :start-after: [START howto_dataplex_data_scan_job_state_sensor]
+    :end-before: [END howto_dataplex_data_scan_job_state_sensor]
