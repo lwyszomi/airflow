@@ -115,3 +115,27 @@ With this configuration we can create the lake:
     :dedent: 4
     :start-after: [START howto_dataplex_create_lake_operator]
     :end-before: [END howto_dataplex_create_lake_operator]
+
+Create a data quality
+---------------------
+
+Before you create a dataplex data quality you need to define its body.
+For more information about the available fields to pass when creating a data quality, visit `Dataplex create data quality API. <https://cloud.google.com/dataplex/docs/reference/rest/v1/projects.locations.dataScans#DataScan>`__
+
+A simple data quality configuration can look as followed:
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex_dq.py
+    :language: python
+    :dedent: 0
+    :start-after: [START howto_dataplex_data_quality_configuration]
+    :end-before: [END howto_dataplex_data_quality_configuration]
+
+With this configuration we can create the data quality:
+
+:class:`~airflow.providers.google.cloud.operators.dataplex.DataplexCreateDataQualityScanOperator`
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex_dq.py
+    :language: python
+    :dedent: 4
+    :start-after: [START howto_dataplex_create_data_quality_operator]
+    :end-before: [END howto_dataplex_create_data_quality_operator]
