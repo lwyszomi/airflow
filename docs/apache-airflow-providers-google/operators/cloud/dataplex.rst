@@ -116,6 +116,19 @@ With this configuration we can create the lake:
     :start-after: [START howto_dataplex_create_lake_operator]
     :end-before: [END howto_dataplex_create_lake_operator]
 
+Delete a lake
+-------------
+
+To delete a lake you can use:
+
+:class:`~airflow.providers.google.cloud.operators.dataplex.DataplexDeleteLakeOperator`
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex.py
+    :language: python
+    :dedent: 4
+    :start-after: [START howto_dataplex_delete_lake_operator]
+    :end-before: [END howto_dataplex_delete_lake_operator]
+
 Create a data quality
 ---------------------
 
