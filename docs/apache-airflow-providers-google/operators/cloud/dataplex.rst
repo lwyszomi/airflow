@@ -140,6 +140,19 @@ With this configuration we can create the data quality:
     :start-after: [START howto_dataplex_create_data_quality_operator]
     :end-before: [END howto_dataplex_create_data_quality_operator]
 
+Delete a data quality
+---------------------
+
+To delete a data quality you can use:
+
+:class:`~airflow.providers.google.cloud.operators.dataplex.DataplexDeleteDataQualityOperator`
+
+.. exampleinclude:: /../../tests/system/providers/google/cloud/dataplex/example_dataplex_dq.py
+    :language: python
+    :dedent: 4
+    :start-after: [START howto_dataplex_delete_data_quality_operator]
+    :end-before: [END howto_dataplex_delete_data_quality_operator]
+
 Run a data quality
 ------------------
 
