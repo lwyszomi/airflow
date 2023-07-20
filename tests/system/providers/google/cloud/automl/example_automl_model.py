@@ -57,6 +57,7 @@ GCP_PROJECT_ID = os.environ.get("SYSTEM_TESTS_GCP_PROJECT", "default")
 GCP_AUTOML_LOCATION = "us-central1"
 
 DATA_SAMPLE_GCS_BUCKET_NAME = f"bucket_{DAG_ID}_{ENV_ID}"
+# Currently a problem with public access to resources
 RESOURCE_DATA_BUCKET = "system-tests-resources"
 
 DATASET_NAME = "test_dataset_model"
@@ -126,7 +127,7 @@ with models.DAG(
         storage_class="REGIONAL",
         location=GCP_AUTOML_LOCATION,
     )
-
+    # Currently a problem with public access to resources
     move_dataset_file = GCSSynchronizeBucketsOperator(
         task_id="move_data_to_bucket",
         source_bucket=RESOURCE_DATA_BUCKET,
