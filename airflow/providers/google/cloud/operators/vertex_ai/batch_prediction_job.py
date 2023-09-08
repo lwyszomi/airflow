@@ -54,7 +54,7 @@ class CreateBatchPredictionJobOperator(GoogleCloudBaseOperator):
     :param region: Required. The ID of the Google Cloud region that the service belongs to.
     :param batch_prediction_job: Required. The BatchPredictionJob to create.
     :param job_display_name: Required. The user-defined name of the BatchPredictionJob. The name can be
-        up to 128 characters long and can be consist of any UTF-8 characters.
+        up to 128 characters long and can consist of any UTF-8 characters.
     :param model_name: Required. A fully-qualified model resource name or model ID.
     :param instances_format: Required. The format in which instances are provided. Must be one of the
         formats listed in `Model.supported_input_storage_formats`. Default is "jsonl" when using

@@ -67,7 +67,7 @@ class CreateHyperparameterTuningJobOperator(GoogleCloudBaseOperator):
     :param max_trial_count: Required. The desired total number of Trials.
     :param parallel_trial_count: Required. The desired number of Trials to run in parallel.
     :param worker_pool_specs: Required. The spec of the worker pools including machine type and Docker
-        image. Can provided as a list of dictionaries or list of WorkerPoolSpec proto messages.
+        image. Can be provided as a list of dictionaries or list of WorkerPoolSpec proto messages.
     :param base_output_dir: Optional. GCS output directory of job. If not provided a timestamped
         directory in the staging directory will be used.
     :param custom_job_labels: Optional. The labels with user-defined metadata to organize CustomJobs.

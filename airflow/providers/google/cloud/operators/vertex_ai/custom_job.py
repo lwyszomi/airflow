@@ -61,6 +61,10 @@ class CustomTrainingJobBaseOperator(GoogleCloudBaseOperator):
         model_instance_schema_uri: str | None = None,
         model_parameters_schema_uri: str | None = None,
         model_prediction_schema_uri: str | None = None,
+        parent_model: str | None = None,
+        is_default_version: bool | None = None,
+        model_version_aliases: list[str] | None = None,
+        model_version_description: str | None = None,
         labels: dict[str, str] | None = None,
         training_encryption_spec_key_name: str | None = None,
         model_encryption_spec_key_name: str | None = None,
@@ -114,6 +118,10 @@ class CustomTrainingJobBaseOperator(GoogleCloudBaseOperator):
         self.model_parameters_schema_uri = model_parameters_schema_uri
         self.model_prediction_schema_uri = model_prediction_schema_uri
         self.labels = labels
+        self.parent_model = parent_model
+        self.is_default_version = is_default_version
+        self.model_version_aliases = model_version_aliases
+        self.model_version_description = model_version_description
         self.training_encryption_spec_key_name = training_encryption_spec_key_name
         self.model_encryption_spec_key_name = model_encryption_spec_key_name
         self.staging_bucket = staging_bucket
@@ -234,6 +242,9 @@ class CreateCustomContainerTrainingJobOperator(CustomTrainingJobBaseOperator):
             and probably different, including the URI scheme, than the
             one given on input. The output URI will point to a location
             where the user only has a read access.
+    :param parent_model: Optional. The resource name or model ID of an existing model.
+            The new model uploaded by this job will be a version of `parent_model`.
+            Only set this field when training a new version of an existing model.
     :param project_id: Project to run training in.
     :param region: Location to run training in.
     :param labels: Optional. The labels with user-defined metadata to
@@ -409,6 +420,7 @@ class CreateCustomContainerTrainingJobOperator(CustomTrainingJobBaseOperator):
     template_fields = (
         "region",
         "command",
+        "parent_model",
         "dataset_id",
         "impersonation_chain",
     )
@@ -428,6 +440,8 @@ class CreateCustomContainerTrainingJobOperator(CustomTrainingJobBaseOperator):
             gcp_conn_id=self.gcp_conn_id,
             impersonation_chain=self.impersonation_chain,
         )
+        self.parent_model = self.parent_model.rpartition("@")[0] if self.parent_model else None
+
         model, training_id, custom_job_id = self.hook.create_custom_container_training_job(
             project_id=self.project_id,
             region=self.region,
@@ -445,6 +459,7 @@ class CreateCustomContainerTrainingJobOperator(CustomTrainingJobBaseOperator):
             model_instance_schema_uri=self.model_instance_schema_uri,
             model_parameters_schema_uri=self.model_parameters_schema_uri,
             model_prediction_schema_uri=self.model_prediction_schema_uri,
+            parent_model=self.parent_model,
             labels=self.labels,
             training_encryption_spec_key_name=self.training_encryption_spec_key_name,
             model_encryption_spec_key_name=self.model_encryption_spec_key_name,
@@ -481,6 +496,7 @@ class CreateCustomContainerTrainingJobOperator(CustomTrainingJobBaseOperator):
         if model:
             result = Model.to_dict(model)
             model_id = self.hook.extract_model_id(result)
+            self.xcom_push(context, key="model_id", value=model_id)
             VertexAIModelLink.persist(context=context, task_instance=self, model_id=model_id)
         else:
             result = model  # type: ignore
@@ -579,6 +595,24 @@ class CreateCustomPythonPackageTrainingJobOperator(CustomTrainingJobBaseOperator
             and probably different, including the URI scheme, than the
             one given on input. The output URI will point to a location
             where the user only has a read access.
+    :param parent_model: Optional. The resource name or model ID of an existing model.
+            The new model uploaded by this job will be a version of `parent_model`.
+            Only set this field when training a new version of an existing model.
+    :param is_default_version: Optional. When set to True, the newly uploaded model version will
+            automatically have alias "default" included. Subsequent uses of
+            the model produced by this job without a version specified will
+            use this "default" version.
+            When set to False, the "default" alias will not be moved.
+            Actions targeting the model version produced by this job will need
+            to specifically reference this version by ID or alias.
+            New model uploads, i.e. version 1, will always be "default" aliased.
+    :param model_version_aliases: Optional. User provided version aliases so that the model version
+            uploaded by this job can be referenced via alias instead of
+            auto-generated version ID. A default version alias will be created
+            for the first version of the model.
+            The format is [a-z][a-zA-Z0-9-]{0,126}[a-z0-9]
+    :param model_version_description: Optional. The description of the model version
+            being uploaded by this job.
     :param project_id: Project to run training in.
     :param region: Location to run training in.
     :param labels: Optional. The labels with user-defined metadata to
@@ -752,6 +786,7 @@ class CreateCustomPythonPackageTrainingJobOperator(CustomTrainingJobBaseOperator
     """
 
     template_fields = (
+        "parent_model",
         "region",
         "dataset_id",
         "impersonation_chain",
@@ -774,6 +809,7 @@ class CreateCustomPythonPackageTrainingJobOperator(CustomTrainingJobBaseOperator
             gcp_conn_id=self.gcp_conn_id,
             impersonation_chain=self.impersonation_chain,
         )
+        self.parent_model = self.parent_model.rpartition("@")[0] if self.parent_model else None
         model, training_id, custom_job_id = self.hook.create_custom_python_package_training_job(
             project_id=self.project_id,
             region=self.region,
@@ -792,6 +828,10 @@ class CreateCustomPythonPackageTrainingJobOperator(CustomTrainingJobBaseOperator
             model_instance_schema_uri=self.model_instance_schema_uri,
             model_parameters_schema_uri=self.model_parameters_schema_uri,
             model_prediction_schema_uri=self.model_prediction_schema_uri,
+            parent_model=self.parent_model,
+            is_default_version=self.is_default_version,
+            model_version_aliases=self.model_version_aliases,
+            model_version_description=self.model_version_description,
             labels=self.labels,
             training_encryption_spec_key_name=self.training_encryption_spec_key_name,
             model_encryption_spec_key_name=self.model_encryption_spec_key_name,
@@ -828,6 +868,7 @@ class CreateCustomPythonPackageTrainingJobOperator(CustomTrainingJobBaseOperator
         if model:
             result = Model.to_dict(model)
             model_id = self.hook.extract_model_id(result)
+            self.xcom_push(context, key="model_id", value=model_id)
             VertexAIModelLink.persist(context=context, task_instance=self, model_id=model_id)
         else:
             result = model  # type: ignore
@@ -926,6 +967,9 @@ class CreateCustomTrainingJobOperator(CustomTrainingJobBaseOperator):
             and probably different, including the URI scheme, than the
             one given on input. The output URI will point to a location
             where the user only has a read access.
+    :param parent_model: Optional. The resource name or model ID of an existing model.
+            The new model uploaded by this job will be a version of `parent_model`.
+            Only set this field when training a new version of an existing model.
     :param project_id: Project to run training in.
     :param region: Location to run training in.
     :param labels: Optional. The labels with user-defined metadata to
@@ -1101,6 +1145,7 @@ class CreateCustomTrainingJobOperator(CustomTrainingJobBaseOperator):
     template_fields = (
         "region",
         "script_path",
+        "parent_model",
         "requirements",
         "dataset_id",
         "impersonation_chain",
@@ -1123,6 +1168,8 @@ class CreateCustomTrainingJobOperator(CustomTrainingJobBaseOperator):
             gcp_conn_id=self.gcp_conn_id,
             impersonation_chain=self.impersonation_chain,
         )
+        self.parent_model = self.parent_model.rpartition("@")[0] if self.parent_model else None
+
         model, training_id, custom_job_id = self.hook.create_custom_training_job(
             project_id=self.project_id,
             region=self.region,
@@ -1141,6 +1188,7 @@ class CreateCustomTrainingJobOperator(CustomTrainingJobBaseOperator):
             model_instance_schema_uri=self.model_instance_schema_uri,
             model_parameters_schema_uri=self.model_parameters_schema_uri,
             model_prediction_schema_uri=self.model_prediction_schema_uri,
+            parent_model=self.parent_model,
             labels=self.labels,
             training_encryption_spec_key_name=self.training_encryption_spec_key_name,
             model_encryption_spec_key_name=self.model_encryption_spec_key_name,
@@ -1177,6 +1225,7 @@ class CreateCustomTrainingJobOperator(CustomTrainingJobBaseOperator):
         if model:
             result = Model.to_dict(model)
             model_id = self.hook.extract_model_id(result)
+            self.xcom_push(context, key="model_id", value=model_id)
             VertexAIModelLink.persist(context=context, task_instance=self, model_id=model_id)
         else:
             result = model  # type: ignore
@@ -1275,8 +1324,77 @@ class DeleteCustomTrainingJobOperator(GoogleCloudBaseOperator):
             self.log.info("The Custom Job ID %s does not exist.", self.custom_job)
 
 
+class CancelCustomTrainingJobOperator(GoogleCloudBaseOperator):
+    r"""
+    Cancels a CustomTrainingJob, CustomPythonTrainingJob, or CustomContainerTrainingJob.
+
+    TrainingJob should be of state RUNNING to be cancelled.
+
+    :param custom_job_id: Required. The name of the CustomJob to cancel.
+    :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
+    :param region: Required. The ID of the Google Cloud region that the service belongs to.
+    :param retry: Designation of what errors, if any, should be retried.
+    :param timeout: The timeout for this request.
+    :param metadata: Strings which should be sent along with the request as metadata.
+    :param gcp_conn_id: The connection ID to use connecting to Google Cloud.
+    :param impersonation_chain: Optional service account to impersonate using short-term
+        credentials, or chained list of accounts required to get the access_token
+        of the last account in the list, which will be impersonated in the request.
+        If set as a string, the account must grant the originating account
+        the Service Account Token Creator IAM role.
+        If set as a sequence, the identities from the list must grant
+        Service Account Token Creator IAM role to the directly preceding identity, with first
+        account from the list granting this role to the originating account (templated).
+    """
+
+    template_fields = ("custom_job_id", "region", "project_id", "impersonation_chain")
+
+    def __init__(
+        self,
+        *,
+        custom_job_id: str,
+        region: str,
+        project_id: str,
+        retry: Retry | _MethodDefault = DEFAULT,
+        timeout: float | None = None,
+        metadata: Sequence[tuple[str, str]] = (),
+        gcp_conn_id: str = "google_cloud_default",
+        impersonation_chain: str | Sequence[str] | None = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.custom_job_id = custom_job_id
+        self.region = region
+        self.project_id = project_id
+        self.retry = retry
+        self.timeout = timeout
+        self.metadata = metadata
+        self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
+
+    def execute(self, context: Context):
+        hook = CustomJobHook(
+            gcp_conn_id=self.gcp_conn_id,
+            impersonation_chain=self.impersonation_chain,
+        )
+        try:
+            self.log.info("Canceling Custom Training job: %s", self.custom_job_id)
+            hook.cancel_custom_job(
+                custom_job=self.custom_job_id,
+                region=self.region,
+                project_id=self.project_id,
+                retry=self.retry,
+                timeout=self.timeout,
+                metadata=self.metadata,
+            )
+            self.log.info("Training Custom job was cancelled.")
+        except NotFound:
+            self.log.info("The Custom Training Job ID %s does not exist.", self.custom_job_id)
+
+
 class ListCustomTrainingJobOperator(GoogleCloudBaseOperator):
-    """Lists CustomTrainingJob, CustomPythonTrainingJob, or CustomContainerTrainingJob in a Location.
+    """
+    Lists CustomTrainingJob, CustomPythonTrainingJob, or CustomContainerTrainingJob in a Location.
 
     :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
     :param region: Required. The ID of the Google Cloud region that the service belongs to.

@@ -65,9 +65,15 @@ from airflow.providers.google.cloud.operators.vertex_ai.hyperparameter_tuning_jo
     ListHyperparameterTuningJobOperator,
 )
 from airflow.providers.google.cloud.operators.vertex_ai.model_service import (
+    AddVersionAliasesOnModelOperator,
     DeleteModelOperator,
+    DeleteModelVersionOperator,
+    DeleteVersionAliasesOnModelOperator,
     ExportModelOperator,
+    GetModelOperator,
     ListModelsOperator,
+    ListModelVersionsOperator,
+    SetDefaultVersionOnModelOperator,
     UploadModelOperator,
 )
 
@@ -168,6 +174,7 @@ TEST_OUTPUT_CONFIG = {
 
 TEST_CREATE_REQUEST_TIMEOUT = 100.5
 TEST_BATCH_SIZE = 4000
+TEST_VERSION_ALIASES = ["new-alias"]
 
 
 class TestVertexAICreateCustomContainerTrainingJobOperator:
@@ -219,6 +226,7 @@ class TestVertexAICreateCustomContainerTrainingJobOperator:
             test_fraction_split=TEST_FRACTION_SPLIT,
             region=GCP_LOCATION,
             project_id=GCP_PROJECT,
+            parent_model=None,
             model_serving_container_predict_route=None,
             model_serving_container_health_route=None,
             model_serving_container_command=None,
@@ -303,6 +311,10 @@ class TestVertexAICreateCustomPythonPackageTrainingJobOperator:
             test_fraction_split=TEST_FRACTION_SPLIT,
             region=GCP_LOCATION,
             project_id=GCP_PROJECT,
+            parent_model=None,
+            is_default_version=None,
+            model_version_aliases=None,
+            model_version_description=None,
             model_serving_container_predict_route=None,
             model_serving_container_health_route=None,
             model_serving_container_command=None,
@@ -378,6 +390,7 @@ class TestVertexAICreateCustomTrainingJobOperator:
             training_fraction_split=None,
             validation_fraction_split=None,
             test_fraction_split=None,
+            parent_model=None,
             region=GCP_LOCATION,
             project_id=GCP_PROJECT,
             model_serving_container_predict_route=None,
@@ -708,6 +721,7 @@ class TestVertexAICreateAutoMLForecastingTrainingJobOperator:
             forecast_horizon=TEST_TRAINING_FORECAST_HORIZON,
             data_granularity_unit=TEST_TRAINING_DATA_GRANULARITY_UNIT,
             data_granularity_count=TEST_TRAINING_DATA_GRANULARITY_COUNT,
+            parent_model=None,
             optimization_objective=None,
             column_specs=None,
             column_transformations=None,
@@ -760,6 +774,7 @@ class TestVertexAICreateAutoMLImageTrainingJobOperator:
             display_name=DISPLAY_NAME,
             dataset=mock_dataset.return_value,
             prediction_type="classification",
+            parent_model=None,
             multi_label=False,
             model_type="CLOUD",
             base_model=None,
@@ -812,6 +827,7 @@ class TestVertexAICreateAutoMLTabularTrainingJobOperator:
             region=GCP_LOCATION,
             display_name=DISPLAY_NAME,
             dataset=mock_dataset.return_value,
+            parent_model=None,
             target_column=None,
             optimization_prediction_type=None,
             optimization_objective=None,
@@ -865,6 +881,7 @@ class TestVertexAICreateAutoMLTextTrainingJobOperator:
             region=GCP_LOCATION,
             display_name=DISPLAY_NAME,
             dataset=mock_dataset.return_value,
+            parent_model=None,
             prediction_type=None,
             multi_label=False,
             sentiment_max=10,
@@ -908,6 +925,7 @@ class TestVertexAICreateAutoMLVideoTrainingJobOperator:
             region=GCP_LOCATION,
             display_name=DISPLAY_NAME,
             dataset=mock_dataset.return_value,
+            parent_model=None,
             prediction_type="classification",
             model_type="CLOUD",
             labels=None,
@@ -1501,6 +1519,176 @@ class TestVertexAIUploadModelOperator:
             region=GCP_LOCATION,
             project_id=GCP_PROJECT,
             model=TEST_MODEL_OBJ,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+
+
+class TestVertexAIGetModelsOperator:
+    @mock.patch(VERTEX_AI_PATH.format("model_service.Model.to_dict"))
+    @mock.patch(VERTEX_AI_PATH.format("model_service.ModelServiceHook"))
+    def test_execute(self, mock_hook, to_dict_mock):
+
+        op = GetModelOperator(
+            task_id=TASK_ID,
+            model_id=TEST_MODEL_NAME,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+        op.execute(context={"ti": mock.MagicMock()})
+        mock_hook.assert_called_once_with(gcp_conn_id=GCP_CONN_ID, impersonation_chain=IMPERSONATION_CHAIN)
+        mock_hook.return_value.get_model.assert_called_once_with(
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            model_id=TEST_MODEL_NAME,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+
+
+class TestVertexAIListModelVersionsOperator:
+    @mock.patch(VERTEX_AI_PATH.format("model_service.Model.to_dict"))
+    @mock.patch(VERTEX_AI_PATH.format("model_service.ModelServiceHook"))
+    def test_execute(self, mock_hook, to_dict_mock):
+
+        op = ListModelVersionsOperator(
+            task_id=TASK_ID,
+            model_id=TEST_MODEL_NAME,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+        op.execute(context={"ti": mock.MagicMock()})
+        mock_hook.assert_called_once_with(gcp_conn_id=GCP_CONN_ID, impersonation_chain=IMPERSONATION_CHAIN)
+        mock_hook.return_value.list_model_versions.assert_called_once_with(
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            model_id=TEST_MODEL_NAME,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+
+
+class TestVertexAISetDefaultVersionOnModelOperator:
+    @mock.patch(VERTEX_AI_PATH.format("model_service.Model.to_dict"))
+    @mock.patch(VERTEX_AI_PATH.format("model_service.ModelServiceHook"))
+    def test_execute(self, mock_hook, to_dict_mock):
+
+        op = SetDefaultVersionOnModelOperator(
+            task_id=TASK_ID,
+            model_id=TEST_MODEL_NAME,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+        op.execute(context={"ti": mock.MagicMock()})
+        mock_hook.assert_called_once_with(gcp_conn_id=GCP_CONN_ID, impersonation_chain=IMPERSONATION_CHAIN)
+        mock_hook.return_value.set_version_as_default.assert_called_once_with(
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            model_id=TEST_MODEL_NAME,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+
+
+class TestVertexAIAddVersionAliasesOnModelOperator:
+    @mock.patch(VERTEX_AI_PATH.format("model_service.Model.to_dict"))
+    @mock.patch(VERTEX_AI_PATH.format("model_service.ModelServiceHook"))
+    def test_execute(self, mock_hook, to_dict_mock):
+
+        op = AddVersionAliasesOnModelOperator(
+            task_id=TASK_ID,
+            model_id=TEST_MODEL_NAME,
+            version_aliases=TEST_VERSION_ALIASES,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+        op.execute(context={"ti": mock.MagicMock()})
+        mock_hook.assert_called_once_with(gcp_conn_id=GCP_CONN_ID, impersonation_chain=IMPERSONATION_CHAIN)
+        mock_hook.return_value.add_version_aliases.assert_called_once_with(
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            model_id=TEST_MODEL_NAME,
+            version_aliases=TEST_VERSION_ALIASES,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+
+
+class TestVertexAIDeleteVersionAliasesOnModelOperator:
+    @mock.patch(VERTEX_AI_PATH.format("model_service.Model.to_dict"))
+    @mock.patch(VERTEX_AI_PATH.format("model_service.ModelServiceHook"))
+    def test_execute(self, mock_hook, to_dict_mock):
+        op = DeleteVersionAliasesOnModelOperator(
+            task_id=TASK_ID,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            model_id=TEST_MODEL_ID,
+            version_aliases=TEST_VERSION_ALIASES,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+        op.execute(context={"ti": mock.MagicMock()})
+        mock_hook.assert_called_once_with(gcp_conn_id=GCP_CONN_ID, impersonation_chain=IMPERSONATION_CHAIN)
+        mock_hook.return_value.delete_version_aliases.assert_called_once_with(
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            model_id=TEST_MODEL_ID,
+            version_aliases=TEST_VERSION_ALIASES,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+
+
+class TestVertexAIDeleteModelVersionOperator:
+    @mock.patch(VERTEX_AI_PATH.format("model_service.Model.to_dict"))
+    @mock.patch(VERTEX_AI_PATH.format("model_service.ModelServiceHook"))
+    def test_execute(self, mock_hook, to_dict_mock):
+        op = DeleteModelVersionOperator(
+            task_id=TASK_ID,
+            gcp_conn_id=GCP_CONN_ID,
+            impersonation_chain=IMPERSONATION_CHAIN,
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            model_id=TEST_MODEL_ID,
+            retry=RETRY,
+            timeout=TIMEOUT,
+            metadata=METADATA,
+        )
+        op.execute(context={"ti": mock.MagicMock()})
+        mock_hook.assert_called_once_with(gcp_conn_id=GCP_CONN_ID, impersonation_chain=IMPERSONATION_CHAIN)
+        mock_hook.return_value.delete_model_version.assert_called_once_with(
+            region=GCP_LOCATION,
+            project_id=GCP_PROJECT,
+            model_id=TEST_MODEL_ID,
             retry=RETRY,
             timeout=TIMEOUT,
             metadata=METADATA,
