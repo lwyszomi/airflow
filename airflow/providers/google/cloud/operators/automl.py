@@ -49,11 +49,6 @@ if TYPE_CHECKING:
     from airflow.utils.context import Context
 
 MetaData = Sequence[Tuple[str, str]]
-automl_nl_model_keys = [
-    "text_classification_model_metadata",
-    "text_extraction_model_metadata",
-    "text_sentiment_dataset_metadata",
-]
 
 
 class AutoMLTrainModelOperator(GoogleCloudBaseOperator):
@@ -98,6 +93,11 @@ class AutoMLTrainModelOperator(GoogleCloudBaseOperator):
         AutoMLModelTrainLink(),
         AutoMLModelLink(),
     )
+    automl_nl_model_keys = [
+    "text_classification_model_metadata",
+    "text_extraction_model_metadata",
+    "text_sentiment_dataset_metadata",
+    ]
 
     def __init__(
         self,
