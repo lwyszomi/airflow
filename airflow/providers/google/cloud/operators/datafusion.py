@@ -34,19 +34,10 @@ from airflow.providers.google.cloud.links.datafusion import (
 from airflow.providers.google.cloud.operators.cloud_base import GoogleCloudBaseOperator
 from airflow.providers.google.cloud.triggers.datafusion import DataFusionStartPipelineTrigger
 from airflow.providers.google.cloud.utils.datafusion import DataFusionPipelineType
+from airflow.providers.google.cloud.utils.helpers import resource_path_to_dict
 
 if TYPE_CHECKING:
     from airflow.utils.context import Context
-
-
-class DataFusionPipelineLinkHelper:
-    """Helper class for Pipeline links."""
-
-    @staticmethod
-    def get_project_id(instance):
-        instance = instance["name"]
-        project_id = next(x for x in instance.split("/") if x.startswith("airflow"))
-        return project_id
 
 
 class CloudDataFusionRestartInstanceOperator(GoogleCloudBaseOperator):
@@ -114,7 +105,7 @@ class CloudDataFusionRestartInstanceOperator(GoogleCloudBaseOperator):
         instance = hook.wait_for_operation(operation)
         self.log.info("Instance %s restarted successfully", self.instance_name)
 
-        project_id = self.project_id or DataFusionPipelineLinkHelper.get_project_id(instance)
+        project_id = resource_path_to_dict(resource_name=instance["name"])["projects"]
         DataFusionInstanceLink.persist(
             context=context,
             task_instance=self,
@@ -272,7 +263,7 @@ class CloudDataFusionCreateInstanceOperator(GoogleCloudBaseOperator):
                     instance_name=self.instance_name, location=self.location, project_id=self.project_id
                 )
 
-        project_id = self.project_id or DataFusionPipelineLinkHelper.get_project_id(instance)
+        project_id = resource_path_to_dict(resource_name=instance["name"])["projects"]
         DataFusionInstanceLink.persist(
             context=context,
             task_instance=self,
@@ -361,7 +352,7 @@ class CloudDataFusionUpdateInstanceOperator(GoogleCloudBaseOperator):
         instance = hook.wait_for_operation(operation)
         self.log.info("Instance %s updated successfully", self.instance_name)
 
-        project_id = self.project_id or DataFusionPipelineLinkHelper.get_project_id(instance)
+        project_id = resource_path_to_dict(resource_name=instance["name"])["projects"]
         DataFusionInstanceLink.persist(
             context=context,
             task_instance=self,
@@ -432,7 +423,7 @@ class CloudDataFusionGetInstanceOperator(GoogleCloudBaseOperator):
             project_id=self.project_id,
         )
 
-        project_id = self.project_id or DataFusionPipelineLinkHelper.get_project_id(instance)
+        project_id = resource_path_to_dict(resource_name=instance["name"])["projects"]
         DataFusionInstanceLink.persist(
             context=context,
             task_instance=self,
