@@ -95,7 +95,7 @@ class GCSToGoogleDriveOperator(BaseOperator):
         source_bucket: str,
         source_object: str,
         destination_object: str | None = None,
-        destination_folder_id: str | None = None,
+        destination_folder_id: str = "root",
         move_object: bool = False,
         gcp_conn_id: str = "google_cloud_default",
         impersonation_chain: str | Sequence[str] | None = None,
@@ -169,7 +169,7 @@ class GCSToGoogleDriveOperator(BaseOperator):
             self.gdrive_hook.upload_file(
                 local_location=filename,
                 remote_location=destination_object,
-                folder_id=self.destination_folder_id,
+                folder_id=self.destination_folder_id or "root",
             )
 
         if self.move_object:
