@@ -138,6 +138,20 @@ class GoogleDataprepHook(BaseHook):
         return response.json()
 
     @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
+    def create_flow(self, *, body_request: dict) -> dict:
+        """
+        Creates flow.
+
+        :param body_request: Body of the POST request to be sent.
+            For more details check https://clouddataprep.com/documentation/api#operation/createFlow
+        """
+        endpoint = "/v4/flows"
+        url: str = urljoin(self._base_url, endpoint)
+        response = requests.post(url, headers=self._headers, data=json.dumps(body_request))
+        self._raise_for_status(response)
+        return response.json()
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
     def copy_flow(
         self, *, flow_id: int, name: str = "", description: str = "", copy_datasources: bool = False
     ) -> dict:
@@ -205,3 +219,74 @@ class GoogleDataprepHook(BaseHook):
         except HTTPError:
             self.log.error(response.json().get("exception"))
             raise
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
+    def create_imported_dataset(self, *, body_request: dict) -> dict:
+        """
+        Creates imported dataset.
+
+        :param body_request: Body of the POST request to be sent.
+            For more details check https://clouddataprep.com/documentation/api#operation/createImportedDataset
+        """
+        endpoint = "/v4/importedDatasets"
+        url: str = urljoin(self._base_url, endpoint)
+        response = requests.post(url, headers=self._headers, data=json.dumps(body_request))
+        self._raise_for_status(response)
+        return response.json()
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
+    def create_wrangled_dataset(self, *, body_request: dict) -> dict:
+        """
+        Creates wrangled dataset.
+
+        :param body_request: Body of the POST request to be sent.
+            For more details check
+            https://api.trifacta.com/dataprep-enterprise-cloud/index.html#tag/WrangledDataset
+        """
+        endpoint = "/v4/wrangledDatasets"
+        url: str = urljoin(self._base_url, endpoint)
+        response = requests.post(url, headers=self._headers, data=json.dumps(body_request))
+        self._raise_for_status(response)
+        return response.json()
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
+    def create_output_object(self, *, body_request: dict) -> dict:
+        """
+        Creates output.
+
+        :param body_request: Body of the POST request to be sent.
+            For more details check
+            https://api.trifacta.com/dataprep-premium/index.html#operation/createOutputObject
+        """
+        endpoint = "/v4/outputObjects"
+        url: str = urljoin(self._base_url, endpoint)
+        response = requests.post(url, headers=self._headers, data=json.dumps(body_request))
+        self._raise_for_status(response)
+        return response.json()
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
+    def create_write_settings(self, *, body_request: dict) -> dict:
+        """
+        Creates write settings.
+
+        :param body_request: Body of the POST request to be sent.
+            For more details check
+            https://api.trifacta.com/dataprep-premium/index.html#operation/createWriteSetting
+        """
+        endpoint = "/v4/writeSettings"
+        url: str = urljoin(self._base_url, endpoint)
+        response = requests.post(url, headers=self._headers, data=json.dumps(body_request))
+        self._raise_for_status(response)
+        return response.json()
+
+    @retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, max=10))
+    def delete_imported_dataset(self, *, dataset_id: int) -> None:
+        """
+        Deletes imported dataset.
+
+        :param dataset_id: ID of the imported dataset for removal.
+        """
+        endpoint = f"/v4/importedDatasets/{dataset_id}"
+        url: str = urljoin(self._base_url, endpoint)
+        response = requests.delete(url, headers=self._headers)
+        self._raise_for_status(response)
