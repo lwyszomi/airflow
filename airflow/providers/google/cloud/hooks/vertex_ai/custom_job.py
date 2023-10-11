@@ -18,6 +18,7 @@
 """This module contains a Google Cloud Vertex AI hook."""
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, Sequence
 
 from google.api_core.client_options import ClientOptions
@@ -31,7 +32,7 @@ from google.cloud.aiplatform import (
 )
 from google.cloud.aiplatform_v1 import JobServiceClient, PipelineServiceClient
 
-from airflow.exceptions import AirflowException
+from airflow.exceptions import AirflowException, AirflowProviderDeprecationWarning
 from airflow.providers.google.common.consts import CLIENT_INFO
 from airflow.providers.google.common.hooks.base_google import GoogleBaseHook
 
@@ -370,6 +371,8 @@ class CustomJobHook(GoogleBaseHook):
         [google.rpc.Status.code][google.rpc.Status.code] of 1, corresponding to ``Code.CANCELLED``, and
         [PipelineJob.state][google.cloud.aiplatform.v1.PipelineJob.state] is set to ``CANCELLED``.
 
+        This method is deprecated, please use `PipelineJobHook.cancel_pipeline_job` method.
+
         :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
         :param region: Required. The ID of the Google Cloud region that the service belongs to.
         :param pipeline_job: The name of the PipelineJob to cancel.
@@ -377,6 +380,10 @@ class CustomJobHook(GoogleBaseHook):
         :param timeout: The timeout for this request.
         :param metadata: Strings which should be sent along with the request as metadata.
         """
+        warnings.warn(
+            "This method is deprecated, please use `PipelineJobHook.cancel_pipeline_job` method.",
+            AirflowProviderDeprecationWarning,
+        )
         client = self.get_pipeline_service_client(region)
         name = client.pipeline_job_path(project_id, region, pipeline_job)
 
@@ -485,6 +492,8 @@ class CustomJobHook(GoogleBaseHook):
         """
         Creates a PipelineJob. A PipelineJob will run immediately when created.
 
+        This method is deprecated, please use `PipelineJobHook.create_pipeline_job` method.
+
         :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
         :param region: Required. The ID of the Google Cloud region that the service belongs to.
         :param pipeline_job:  Required. The PipelineJob to create.
@@ -496,6 +505,10 @@ class CustomJobHook(GoogleBaseHook):
         :param timeout: The timeout for this request.
         :param metadata: Strings which should be sent along with the request as metadata.
         """
+        warnings.warn(
+            "This method is deprecated, please use `PipelineJobHook.create_pipeline_job` method.",
+            AirflowProviderDeprecationWarning,
+        )
         client = self.get_pipeline_service_client(region)
         parent = client.common_location_path(project_id, region)
 
@@ -1666,6 +1679,8 @@ class CustomJobHook(GoogleBaseHook):
         """
         Deletes a PipelineJob.
 
+        This method is deprecated, please use `PipelineJobHook.delete_pipeline_job` method.
+
         :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
         :param region: Required. The ID of the Google Cloud region that the service belongs to.
         :param pipeline_job: Required. The name of the PipelineJob resource to be deleted.
@@ -1673,6 +1688,10 @@ class CustomJobHook(GoogleBaseHook):
         :param timeout: The timeout for this request.
         :param metadata: Strings which should be sent along with the request as metadata.
         """
+        warnings.warn(
+            "This method is deprecated, please use `PipelineJobHook.delete_pipeline_job` method.",
+            AirflowProviderDeprecationWarning,
+        )
         client = self.get_pipeline_service_client(region)
         name = client.pipeline_job_path(project_id, region, pipeline_job)
 
@@ -1765,6 +1784,8 @@ class CustomJobHook(GoogleBaseHook):
         """
         Gets a PipelineJob.
 
+        This method is deprecated, please use `PipelineJobHook.get_pipeline_job` method.
+
         :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
         :param region: Required. The ID of the Google Cloud region that the service belongs to.
         :param pipeline_job: Required. The name of the PipelineJob resource.
@@ -1772,6 +1793,10 @@ class CustomJobHook(GoogleBaseHook):
         :param timeout: The timeout for this request.
         :param metadata: Strings which should be sent along with the request as metadata.
         """
+        warnings.warn(
+            "This method is deprecated, please use `PipelineJobHook.get_pipeline_job` method.",
+            AirflowProviderDeprecationWarning,
+        )
         client = self.get_pipeline_service_client(region)
         name = client.pipeline_job_path(project_id, region, pipeline_job)
 
@@ -1867,6 +1892,8 @@ class CustomJobHook(GoogleBaseHook):
         """
         Lists PipelineJobs in a Location.
 
+        This method is deprecated, please use `PipelineJobHook.list_pipeline_jobs` method.
+
         :param project_id: Required. The ID of the Google Cloud project that the service belongs to.
         :param region: Required. The ID of the Google Cloud region that the service belongs to.
         :param filter: Optional. Lists the PipelineJobs that match the filter expression. The
@@ -1922,6 +1949,10 @@ class CustomJobHook(GoogleBaseHook):
         :param timeout: The timeout for this request.
         :param metadata: Strings which should be sent along with the request as metadata.
         """
+        warnings.warn(
+            "This method is deprecated, please use `PipelineJobHook.list_pipeline_jobs` method.",
+            AirflowProviderDeprecationWarning,
+        )
         client = self.get_pipeline_service_client(region)
         parent = client.common_location_path(project_id, region)
 
