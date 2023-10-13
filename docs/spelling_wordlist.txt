@@ -22,6 +22,7 @@ AgentKey
 aio
 aiobotocore
 AioSession
+aiplatform
 Airbnb
 airbnb
 Airbyte
@@ -856,6 +857,7 @@ KeyManagementServiceClient
 keyring
 keyspace
 keytab
+kfp
 Kibana
 killMode
 Kinesis
@@ -947,6 +949,7 @@ mesos
 MessageAttributes
 metaclass
 metadatabase
+metadataStores
 metarouter
 Metastore
 metastore
@@ -991,6 +994,7 @@ mysql
 mysqlclient
 mysqldb
 mytaxi
+myVPC
 Namenode
 namenode
 Namespace
@@ -1172,6 +1176,7 @@ productionalize
 ProductSearchClient
 profiler
 programmatically
+proj
 projectId
 projectid
 proto
