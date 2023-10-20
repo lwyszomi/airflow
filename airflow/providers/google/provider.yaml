@@ -90,6 +90,7 @@ dependencies:
   - gcloud-aio-storage>=9.0.0
   - gcsfs>=2023.10.0
   - google-ads>=22.1.0
+  - google-analytics-admin
   - google-api-core>=2.11.0
   - google-api-python-client>=1.6.0
   - google-auth>=1.0.0
@@ -607,6 +608,9 @@ operators:
   - integration-name: Google Analytics360
     python-modules:
       - airflow.providers.google.marketing_platform.operators.analytics
+  - integration-name: Google Analytics (GA4)
+    python-modules:
+      - airflow.providers.google.marketing_platform.operators.analytics_admin
   - integration-name: Google Campaign Manager
     python-modules:
       - airflow.providers.google.marketing_platform.operators.campaign_manager
@@ -848,6 +852,9 @@ hooks:
   - integration-name: Google Cloud Firestore
     python-modules:
       - airflow.providers.google.firebase.hooks.firestore
+  - integration-name: Google Analytics Admin
+    python-modules:
+      - airflow.providers.google.marketing_platform.hooks.analytics_admin
   - integration-name: Google Analytics360
     python-modules:
       - airflow.providers.google.marketing_platform.hooks.analytics
@@ -1202,6 +1209,7 @@ extra-links:
   - airflow.providers.google.cloud.links.mlengine.MLEngineModelVersionDetailsLink
   - airflow.providers.google.common.links.storage.StorageLink
   - airflow.providers.google.common.links.storage.FileDetailsLink
+  - airflow.providers.google.marketing_platform.links.analytics_admin.GoogleAnalyticsPropertyLink
 
 additional-extras:
   - name: apache.beam
