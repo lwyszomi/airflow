@@ -28,9 +28,12 @@ import uuid
 import warnings
 from copy import deepcopy
 from typing import Any, Callable, Generator, Sequence, TypeVar, cast
+from google.api_core.client_options import ClientOptions
 
-from google.cloud.dataflow_v1beta3 import GetJobRequest, Job, JobState, JobsV1Beta3AsyncClient, JobView
+from google.cloud.dataflow_v1beta3 import GetJobRequest, Job, JobState, JobsV1Beta3AsyncClient, JobsV1Beta3Client, JobView, SnapshotsV1Beta3Client
 from googleapiclient.discovery import build
+from google.cloud.dataflow_v1beta3.types import CheckActiveJobsRequest, CheckActiveJobsResponse
+from airflow.providers.google.common.consts import CLIENT_INFO
 
 from airflow.exceptions import AirflowException, AirflowProviderDeprecationWarning
 from airflow.providers.apache.beam.hooks.beam import BeamHook, BeamRunnerType, beam_options_to_args
@@ -139,6 +142,7 @@ class DataflowJobStatus:
     JOB_STATE_PENDING = "JOB_STATE_PENDING"
     JOB_STATE_CANCELLING = "JOB_STATE_CANCELLING"
     JOB_STATE_QUEUED = "JOB_STATE_QUEUED"
+    TURN_UP_STATES = {JOB_STATE_PENDING, JOB_STATE_QUEUED, JOB_STATE_RUNNING}
     FAILED_END_STATES = {JOB_STATE_FAILED, JOB_STATE_CANCELLED}
     SUCCEEDED_END_STATES = {JOB_STATE_DONE, JOB_STATE_UPDATED, JOB_STATE_DRAINED}
     TERMINAL_STATES = SUCCEEDED_END_STATES | FAILED_END_STATES
@@ -284,6 +288,47 @@ class _DataflowJobsController(LoggingMixin):
 
         self.log.debug("fetch_job_metrics_by_id %s:\n%s", job_id, result)
         return result
+
+    def update_job(self, job_id, update_mask, body):
+        result = (
+            self._dataflow.projects()
+            .locations()
+            .jobs()
+            .update(
+                projectId=self._project_number,
+                location=self._job_location,
+                jobId=job_id,
+                body=body,
+                updateMask=update_mask
+            )
+            .execute(num_retries=self._num_retries)
+        )
+        self.log.info("result: %s", result)
+        return result
+
+    def create_job_snapshot(self, job_id):
+        result = (
+            self._dataflow.projects()
+            .locations()
+            .jobs()
+            .snapshot(
+                projectId=self._project_number,
+                location=self._job_location,
+                jobId=job_id,
+                body={
+                    # pass correct parameters here
+                    "ttl": "3.5s",
+                    "snapshotSources": True,
+                    # "description": environment,
+                },
+            )
+            .execute(num_retries=self._num_retries)
+        )
+        self.log.info("result: %s", result)
+        return result
+
+    def fetch_active_jobs(self):
+        return [job for job in self._fetch_all_jobs() if job["currentState"] in DataflowJobStatus.TURN_UP_STATES]
 
     def _fetch_list_job_messages_responses(self, job_id: str) -> Generator[dict, None, None]:
         """
@@ -556,6 +601,17 @@ class DataflowHook(GoogleBaseHook):
         """Returns a Google Cloud Dataflow service object."""
         http_authorized = self._authorize()
         return build("dataflow", "v1b3", http=http_authorized, cache_discovery=False)
+
+    def initialize_client(self, client_class):
+        # this method doesn't work for JobClient, requires some user "dataflow-cloud-router"
+        # for other clients like SnapshotClient works fine
+        # client_options = ClientOptions(api_endpoint=f"dataflow.googleapis.com:443")
+        credentials = self.get_credentials()
+        return client_class(
+            credentials=credentials,
+            # client_info=CLIENT_INFO,
+            # client_options=client_options
+        )
 
     @_fallback_to_location_from_variables
     @_fallback_to_project_id_from_variables
@@ -1092,6 +1148,21 @@ class DataflowHook(GoogleBaseHook):
         )
         return jobs_controller.fetch_job_by_id(job_id)
 
+    def update_job(
+        self,
+        job_id,
+        update_mask,
+        body,
+        project_id: str = PROVIDE_PROJECT_ID,
+        location: str = DEFAULT_DATAFLOW_LOCATION,
+    ):
+        jobs_controller = _DataflowJobsController(
+            dataflow=self.get_conn(),
+            project_number=project_id,
+            location=location,
+        )
+        return jobs_controller.update_job(job_id=job_id, update_mask=update_mask, body=body)
+
     @GoogleBaseHook.fallback_to_default_project_id
     def fetch_job_metrics_by_id(
         self,
@@ -1164,6 +1235,35 @@ class DataflowHook(GoogleBaseHook):
             location=location,
         )
         return jobs_controller.fetch_job_autoscaling_events_by_id(job_id)
+
+    @GoogleBaseHook.fallback_to_default_project_id
+    def check_active_jobs(
+        self,
+        project_id: str,
+        location: str = DEFAULT_DATAFLOW_LOCATION,
+    ) -> list[dict]:
+        jobs_controller = _DataflowJobsController(
+            dataflow=self.get_conn(),
+            project_number=project_id,
+            location=location,
+        )
+        result = jobs_controller.fetch_active_jobs()
+        return result
+
+    @GoogleBaseHook.fallback_to_default_project_id
+    def create_job_snapshot(
+        self,
+        job_id: str,
+        project_id: str,
+        location: str = DEFAULT_DATAFLOW_LOCATION,
+    ) -> dict:
+        jobs_controller = _DataflowJobsController(
+            dataflow=self.get_conn(),
+            project_number=project_id,
+            location=location,
+        )
+        result = jobs_controller.create_job_snapshot(job_id=job_id)
+        return result
 
     @GoogleBaseHook.fallback_to_default_project_id
     def wait_for_done(
