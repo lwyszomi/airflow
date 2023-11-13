@@ -191,7 +191,6 @@ class BeamHook(BaseHook):
         cmd = [*command_prefix, f"--runner={self.runner}"]
         if variables:
             cmd.extend(beam_options_to_args(variables))
-        self.log.info("cmd: %s", cmd)
         run_beam_command(
             cmd=cmd,
             process_line_callback=process_line_callback,
