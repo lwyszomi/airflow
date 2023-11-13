@@ -1016,7 +1016,7 @@ class DataflowStartSqlJobOperator(GoogleCloudBaseOperator):
             project_id=self.project_id,
             on_new_job_callback=set_current_job,
         )
-
+        self.xcom_push(context, key="job_id", value=job["id"])
         return job
 
     def on_kill(self) -> None:
@@ -1334,3 +1334,159 @@ class DataflowStopJobOperator(GoogleCloudBaseOperator):
             self.log.info("No jobs to stop")
 
         return None
+
+
+class DataflowListActiveJobsOperator(GoogleCloudBaseOperator):
+    """
+    Check for existence of active jobs in the given project across the given region.
+
+    :param job_name_prefix: Name prefix specifying which jobs are to be stopped.
+    :param job_id: Job ID specifying which jobs are to be stopped.
+    :param project_id: Optional, the Google Cloud project ID in which to start a job.
+        If set to None or missing, the default project_id from the Google Cloud connection is used.
+    :param location: Optional, Job location. If set to None or missing, "us-central1" will be used.
+    :param gcp_conn_id: The connection ID to use connecting to Google Cloud.
+    :param poll_sleep: The time in seconds to sleep between polling Google
+        Cloud Platform for the dataflow job status to confirm it's stopped.
+    :param impersonation_chain: Optional service account to impersonate using short-term
+        credentials, or chained list of accounts required to get the access_token
+        of the last account in the list, which will be impersonated in the request.
+        If set as a string, the account must grant the originating account
+        the Service Account Token Creator IAM role.
+        If set as a sequence, the identities from the list must grant
+        Service Account Token Creator IAM role to the directly preceding identity, with first
+        account from the list granting this role to the originating account (templated).
+    :param drain_pipeline: Optional, set to False if want to stop streaming job by canceling it
+        instead of draining. See: https://cloud.google.com/dataflow/docs/guides/stopping-a-pipeline
+    :param stop_timeout: wait time in seconds for successful job canceling/draining
+    """
+
+    def __init__(
+        self,
+        project_id: str | None = None,
+        location: str = DEFAULT_DATAFLOW_LOCATION,
+        gcp_conn_id: str = "google_cloud_default",
+        poll_sleep: int = 10,
+        impersonation_chain: str | Sequence[str] | None = None,
+        drain_pipeline: bool = True,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.poll_sleep = poll_sleep
+        self.project_id = project_id
+        self.location = location
+        self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
+        self.hook: DataflowHook | None = None
+        self.drain_pipeline = drain_pipeline
+
+    def execute(self, context: Context) -> None:
+        self.dataflow_hook = DataflowHook(
+            gcp_conn_id=self.gcp_conn_id,
+            poll_sleep=self.poll_sleep,
+            impersonation_chain=self.impersonation_chain,
+            drain_pipeline=self.drain_pipeline,
+        )
+        active_jobs = self.dataflow_hook.check_active_jobs(project_id=self.project_id, location=self.location)
+        self.log.info("Active jobs in %s: %s", active_jobs, self.location)
+        return None
+
+class DataflowUpdateJobOperator(GoogleCloudBaseOperator):
+    template_fields: Sequence[str] = (
+        "job_id",
+    )
+
+    def __init__(
+        self,
+        job_id: str,
+        update_mask: str,
+        updated_body: dict[str, Any],
+        project_id: str | None = None,
+        location: str = DEFAULT_DATAFLOW_LOCATION,
+        gcp_conn_id: str = "google_cloud_default",
+        poll_sleep: int = 10,
+        impersonation_chain: str | Sequence[str] | None = None,
+        stop_timeout: int | None = 10 * 60,
+        drain_pipeline: bool = True,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.update_mask = update_mask
+        self.updated_body = updated_body
+        self.job_id = job_id
+        self.project_id = project_id
+        self.location = location
+        self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
+        self.hook: DataflowHook | None = None
+        self.drain_pipeline = drain_pipeline
+        self.poll_sleep = poll_sleep
+        self.stop_timeout = stop_timeout
+
+    def execute(self, context: Context) -> None:
+        self.dataflow_hook = DataflowHook(
+            gcp_conn_id=self.gcp_conn_id,
+            poll_sleep=self.poll_sleep,
+            impersonation_chain=self.impersonation_chain,
+            cancel_timeout=self.stop_timeout,
+            drain_pipeline=self.drain_pipeline,
+        )
+
+        # streaming jobs can be updated, but batch jobs? Failed to provide correct Field Mask while testing
+        updated_job = self.dataflow_hook.update_job(
+            project_id=self.project_id,
+            location=self.location,
+            job_id=self.job_id,
+            update_mask=self.update_mask,
+            body=self.updated_body,
+        )
+
+        return updated_job
+
+
+class DataflowCreateJobSnapshotOperator(GoogleCloudBaseOperator):
+    template_fields: Sequence[str] = (
+        "job_id",
+    )
+
+    def __init__(
+        self,
+        job_id: str,
+        project_id: str | None = None,
+        location: str = DEFAULT_DATAFLOW_LOCATION,
+        gcp_conn_id: str = "google_cloud_default",
+        poll_sleep: int = 10,
+        impersonation_chain: str | Sequence[str] | None = None,
+        stop_timeout: int | None = 10 * 60,
+        drain_pipeline: bool = True,
+        **kwargs,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.poll_sleep = poll_sleep
+        self.stop_timeout = stop_timeout
+        self.job_id = job_id
+        self.project_id = project_id
+        self.location = location
+        self.gcp_conn_id = gcp_conn_id
+        self.impersonation_chain = impersonation_chain
+        self.hook: DataflowHook | None = None
+        self.drain_pipeline = drain_pipeline
+
+    def execute(self, context: Context):
+        self.dataflow_hook = DataflowHook(
+            gcp_conn_id=self.gcp_conn_id,
+            poll_sleep=self.poll_sleep,
+            impersonation_chain=self.impersonation_chain,
+            cancel_timeout=self.stop_timeout,
+            drain_pipeline=self.drain_pipeline,
+        )
+        # if streaming job exists, then..
+
+        snapshot = self.dataflow_hook.create_job_snapshot(
+            project_id=self.project_id,
+            location=self.location,
+            job_id=self.job_id,
+        )
+        # else "Can't create snapshot of batch job
+
+        return snapshot
