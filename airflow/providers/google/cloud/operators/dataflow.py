@@ -1391,10 +1391,9 @@ class DataflowListActiveJobsOperator(GoogleCloudBaseOperator):
         self.log.info("Active jobs in %s: %s", active_jobs, self.location)
         return None
 
+
 class DataflowUpdateJobOperator(GoogleCloudBaseOperator):
-    template_fields: Sequence[str] = (
-        "job_id",
-    )
+    template_fields: Sequence[str] = ("job_id",)
 
     def __init__(
         self,
@@ -1445,15 +1444,16 @@ class DataflowUpdateJobOperator(GoogleCloudBaseOperator):
 
 
 class DataflowCreateJobSnapshotOperator(GoogleCloudBaseOperator):
-    template_fields: Sequence[str] = (
-        "job_id",
-    )
+    template_fields: Sequence[str] = ("job_id",)
 
     def __init__(
         self,
         job_id: str,
         project_id: str | None = None,
         location: str = DEFAULT_DATAFLOW_LOCATION,
+        snapshot_ttl: str = "604800s",
+        snapshot_sources: bool = False,
+        description: str | None = None,
         gcp_conn_id: str = "google_cloud_default",
         poll_sleep: int = 10,
         impersonation_chain: str | Sequence[str] | None = None,
@@ -1467,6 +1467,9 @@ class DataflowCreateJobSnapshotOperator(GoogleCloudBaseOperator):
         self.job_id = job_id
         self.project_id = project_id
         self.location = location
+        self.snapshot_ttl = snapshot_ttl
+        self.snapshot_sources = snapshot_sources
+        self.description = description
         self.gcp_conn_id = gcp_conn_id
         self.impersonation_chain = impersonation_chain
         self.hook: DataflowHook | None = None
@@ -1486,6 +1489,9 @@ class DataflowCreateJobSnapshotOperator(GoogleCloudBaseOperator):
             project_id=self.project_id,
             location=self.location,
             job_id=self.job_id,
+            snapshot_ttl=self.snapshot_ttl,
+            snapshot_sources=self.snapshot_sources,
+            description=self.description,
         )
         # else "Can't create snapshot of batch job
 

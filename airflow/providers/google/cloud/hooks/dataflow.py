@@ -28,12 +28,15 @@ import uuid
 import warnings
 from copy import deepcopy
 from typing import Any, Callable, Generator, Sequence, TypeVar, cast
-from google.api_core.client_options import ClientOptions
 
-from google.cloud.dataflow_v1beta3 import GetJobRequest, Job, JobState, JobsV1Beta3AsyncClient, JobsV1Beta3Client, JobView, SnapshotsV1Beta3Client
+from google.cloud.dataflow_v1beta3 import (
+    GetJobRequest,
+    Job,
+    JobState,
+    JobsV1Beta3AsyncClient,
+    JobView,
+)
 from googleapiclient.discovery import build
-from google.cloud.dataflow_v1beta3.types import CheckActiveJobsRequest, CheckActiveJobsResponse
-from airflow.providers.google.common.consts import CLIENT_INFO
 
 from airflow.exceptions import AirflowException, AirflowProviderDeprecationWarning
 from airflow.providers.apache.beam.hooks.beam import BeamHook, BeamRunnerType, beam_options_to_args
@@ -299,14 +302,20 @@ class _DataflowJobsController(LoggingMixin):
                 location=self._job_location,
                 jobId=job_id,
                 body=body,
-                updateMask=update_mask
+                updateMask=update_mask,
             )
             .execute(num_retries=self._num_retries)
         )
         self.log.info("result: %s", result)
         return result
 
-    def create_job_snapshot(self, job_id):
+    def create_job_snapshot(
+        self,
+        job_id,
+        snapshot_ttl: str = "604800s",
+        snapshot_sources: bool = False,
+        description: str | None = None,
+    ):
         result = (
             self._dataflow.projects()
             .locations()
@@ -316,10 +325,9 @@ class _DataflowJobsController(LoggingMixin):
                 location=self._job_location,
                 jobId=job_id,
                 body={
-                    # pass correct parameters here
-                    "ttl": "3.5s",
-                    "snapshotSources": True,
-                    # "description": environment,
+                    "ttl": snapshot_ttl,
+                    "snapshotSources": snapshot_sources,
+                    "description": description,
                 },
             )
             .execute(num_retries=self._num_retries)
@@ -328,7 +336,9 @@ class _DataflowJobsController(LoggingMixin):
         return result
 
     def fetch_active_jobs(self):
-        return [job for job in self._fetch_all_jobs() if job["currentState"] in DataflowJobStatus.TURN_UP_STATES]
+        return [
+            job for job in self._fetch_all_jobs() if job["currentState"] in DataflowJobStatus.TURN_UP_STATES
+        ]
 
     def _fetch_list_job_messages_responses(self, job_id: str) -> Generator[dict, None, None]:
         """
@@ -1256,13 +1266,21 @@ class DataflowHook(GoogleBaseHook):
         job_id: str,
         project_id: str,
         location: str = DEFAULT_DATAFLOW_LOCATION,
+        snapshot_ttl: str = "604800s",
+        snapshot_sources: bool = False,
+        description: str | None = None,
     ) -> dict:
         jobs_controller = _DataflowJobsController(
             dataflow=self.get_conn(),
             project_number=project_id,
             location=location,
         )
-        result = jobs_controller.create_job_snapshot(job_id=job_id)
+        result = jobs_controller.create_job_snapshot(
+            job_id=job_id,
+            snapshot_ttl=snapshot_ttl,
+            snapshot_sources=snapshot_sources,
+            description=description,
+        )
         return result
 
     @GoogleBaseHook.fallback_to_default_project_id
