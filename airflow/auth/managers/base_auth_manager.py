@@ -32,7 +32,7 @@ from airflow.utils.log.logging_mixin import LoggingMixin
 from airflow.utils.session import NEW_SESSION, provide_session
 
 if TYPE_CHECKING:
-    from connexion import FlaskApi
+    from connexion import FlaskApi, FlaskApp
     from sqlalchemy.orm import Session
 
     from airflow.auth.managers.models.base_user import BaseUser
