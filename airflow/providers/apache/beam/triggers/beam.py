@@ -145,17 +145,17 @@ class BeamJavaPipelineTrigger(BeamPipelineBaseTrigger):
     :param job_name: Optional. The 'jobName' to use when executing the Dataflow job.
     :param gcp_conn_id: Optional. The connection ID to use connecting to Google Cloud.
     :param impersonation_chain: Optional. GCP service account to impersonate using short-term
-        credentials, or chained list of accounts required to get the access_token
-        of the last account in the list, which will be impersonated in the request.
-        If set as a string, the account must grant the originating account
-        the Service Account Token Creator IAM role.
-        If set as a sequence, the identities from the list must grant
-        Service Account Token Creator IAM role to the directly preceding identity, with first
-        account from the list granting this role to the originating account (templated).
+    credentials, or chained list of accounts required to get the access_token
+    of the last account in the list, which will be impersonated in the request.
+    If set as a string, the account must grant the originating account
+    the Service Account Token Creator IAM role.
+    If set as a sequence, the identities from the list must grant
+    Service Account Token Creator IAM role to the directly preceding identity, with first
+    account from the list granting this role to the originating account (templated).
     :param poll_sleep: Optional. The time in seconds to sleep between polling GCP for the dataflow job status.
-        Default value is 10s.
+    Default value is 10s.
     :param cancel_timeout: Optional. How long (in seconds) operator should wait for the pipeline to be
-        successfully cancelled when task is being killed. Default value is 300s
+    successfully cancelled when task is being killed. Default value is 300s
 
     """
 
