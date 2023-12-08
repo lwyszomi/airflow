@@ -503,9 +503,9 @@ class BeamAsyncHook(BeamHook):
         Start Apache Beam Java pipeline.
 
         :param variables: Variables passed to the job.
-        :param jar: Name of the jar for the pipeline
+        :param jar: Name of the jar for the pipeline.
         :param job_class: Name of the java class for the pipeline.
-        :return Beam command execution return code
+        :return: Beam command execution return code.
         """
         if "labels" in variables:
             variables["labels"] = json.dumps(variables["labels"], separators=(",", ":"))

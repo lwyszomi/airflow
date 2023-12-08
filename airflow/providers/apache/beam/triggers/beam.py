@@ -48,22 +48,20 @@ class BeamPythonPipelineTrigger(BeamPipelineBaseTrigger):
     :param py_file: Path to the python file to execute.
     :param py_options: Additional options.
     :param py_interpreter: Python version of the Apache Beam pipeline. If `None`, this defaults to the
-    python3. To track python versions supported by beam and related issues
-    check: https://issues.apache.org/jira/browse/BEAM-1251
+        python3. To track python versions supported by beam and related issues
+        check: https://issues.apache.org/jira/browse/BEAM-1251
     :param py_requirements: Additional python package(s) to install.
-    If a value is passed to this parameter, a new virtual environment has been created with
-    additional packages installed.
-
-    You could also install the apache-beam package if it is not installed on your system, or you want
-    to use a different version.
+        If a value is passed to this parameter, a new virtual environment has been created with
+        additional packages installed.
+        You could also install the apache-beam package if it is not installed on your system, or you want
+        to use a different version.
     :param py_system_site_packages: Whether to include system_site_packages in your virtualenv.
-    See virtualenv documentation for more information.
-
-    This option is only relevant if the ``py_requirements`` parameter is not None.
+        See virtualenv documentation for more information.
+        This option is only relevant if the ``py_requirements`` parameter is not None.
     :param runner: Runner on which pipeline will be run. By default, "DirectRunner" is being used.
-    Other possible options: DataflowRunner, SparkRunner, FlinkRunner, PortableRunner.
-    See: :class:`~providers.apache.beam.hooks.beam.BeamRunnerType`
-    See: https://beam.apache.org/documentation/runners/capability-matrix/
+        Other possible options: DataflowRunner, SparkRunner, FlinkRunner, PortableRunner.
+        See: :class:`~providers.apache.beam.hooks.beam.BeamRunnerType`
+        See: https://beam.apache.org/documentation/runners/capability-matrix/
     """
 
     def __init__(
@@ -136,27 +134,26 @@ class BeamJavaPipelineTrigger(BeamPipelineBaseTrigger):
     :param jar: Name of the jar for the pipeline.
     :param job_class: Optional. Name of the java class for the pipeline.
     :param runner: Runner on which pipeline will be run. By default, "DirectRunner" is being used.
-    Other possible options: DataflowRunner, SparkRunner, FlinkRunner, PortableRunner.
-    See: :class:`~providers.apache.beam.hooks.beam.BeamRunnerType`
-    See: https://beam.apache.org/documentation/runners/capability-matrix/
+        Other possible options: DataflowRunner, SparkRunner, FlinkRunner, PortableRunner.
+        See: :class:`~providers.apache.beam.hooks.beam.BeamRunnerType`
+        See: https://beam.apache.org/documentation/runners/capability-matrix/
     :param check_if_running: Optional. Before running job, validate that a previous run is not in process.
     :param project_id: Optional. The Google Cloud project ID in which to start a job.
     :param location: Optional. Job location.
     :param job_name: Optional. The 'jobName' to use when executing the Dataflow job.
     :param gcp_conn_id: Optional. The connection ID to use connecting to Google Cloud.
     :param impersonation_chain: Optional. GCP service account to impersonate using short-term
-    credentials, or chained list of accounts required to get the access_token
-    of the last account in the list, which will be impersonated in the request.
-    If set as a string, the account must grant the originating account
-    the Service Account Token Creator IAM role.
-    If set as a sequence, the identities from the list must grant
-    Service Account Token Creator IAM role to the directly preceding identity, with first
-    account from the list granting this role to the originating account (templated).
+        credentials, or chained list of accounts required to get the access_token
+        of the last account in the list, which will be impersonated in the request.
+        If set as a string, the account must grant the originating account
+        the Service Account Token Creator IAM role.
+        If set as a sequence, the identities from the list must grant
+        Service Account Token Creator IAM role to the directly preceding identity, with first
+        account from the list granting this role to the originating account (templated).
     :param poll_sleep: Optional. The time in seconds to sleep between polling GCP for the dataflow job status.
-    Default value is 10s.
+        Default value is 10s.
     :param cancel_timeout: Optional. How long (in seconds) operator should wait for the pipeline to be
-    successfully cancelled when task is being killed. Default value is 300s
-
+        successfully cancelled when task is being killed. Default value is 300s.
     """
 
     def __init__(
