@@ -82,7 +82,7 @@ class BaseAuthManager(LoggingMixin):
         """
         return []
 
-    def get_api_endpoints(self, connexion_app: connexion.FlaskApp) -> connexion.apps.flask.FlaskApi:
+    def get_api_endpoints(self, connexion_app: connexion.FlaskApp) -> None | Blueprint:
         """Return API endpoint(s) definition for the auth manager."""
         return None
 
