@@ -199,3 +199,37 @@ For further information, look at:
 
 * `Kubernetes Documentation <https://kubernetes.io/docs/home/>`__
 * `Pull an Image from a Private Registry <https://kubernetes.io/docs/tasks/configure-pod-container/pull-image-private-registry/>`__
+
+
+
+.. _howto/operator:kubernetesjoboperator:
+
+KubernetesJobOperator
+=====================
+
+The :class:`~airflow.providers.cncf.kubernetes.operators.job.KubernetesJobOperator` allows
+you to create and run Jobs on a Kubernetes cluster.
+
+.. note::
+  If you use a managed Kubernetes consider using a specialize KPO operator as it simplifies the Kubernetes authorization process :
+
+  - :ref:`GKEStartJobOperator <howto/operator:GKEStartJobOperator>` operator for `Google Kubernetes Engine <https://cloud.google.com/kubernetes-engine/>`__.
+
+.. note::
+  The :doc:`Kubernetes executor <apache-airflow:core-concepts/executor/kubernetes>` is **not** required to use this operator.
+
+How does this operator work?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The :class:`~airflow.providers.cncf.kubernetes.operators.job.KubernetesJobOperator` uses the
+Kubernetes API to launch a job in a Kubernetes cluster. The operator uses the Kube Python Client to generate a Kubernetes API
+request that dynamically launches this Job.
+Users can specify a kubeconfig file using the ``config_file`` parameter, otherwise the operator will default
+to ``~/.kube/config``. It also allows users to supply a template YAML file using the ``job_template_file`` parameter.
+
+.. exampleinclude:: /../../tests/system/providers/cncf/kubernetes/example_kubernetes_job.py
+    :language: python
+    :dedent: 4
+    :start-after: [START howto_operator_k8s_job]
+    :end-before: [END howto_operator_k8s_job]
+
+More information about the Jobs here: `Kubernetes Job Documentation <https://kubernetes.io/docs/concepts/workloads/controllers/job/>`__
