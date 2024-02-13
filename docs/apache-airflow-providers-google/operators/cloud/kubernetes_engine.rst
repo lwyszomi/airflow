@@ -213,6 +213,8 @@ All Kubernetes parameters (except ``config_file``) are also valid for the ``GKES
     :start-after: [START howto_operator_gke_start_job]
     :end-before: [END howto_operator_gke_start_job]
 
+For run Job on a GKE cluster with Kueue enabled use ``GKEStartKueueJobOperator``.
+
 Reference
 ^^^^^^^^^
 
